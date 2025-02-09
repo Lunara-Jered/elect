@@ -1,0 +1,26 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: cimg/android:2023.04  # Image CircleCI pour Android
+    environment:
+      GRADLE_USER_HOME: /home/circleci/.gradle
+    steps:
+      - checkout
+      - restore_cache:
+          key: gradle-{{ checksum "build.gradle" }}
+      - run:
+          name: Donner les permissions à Gradle
+          command: chmod +x gradlew
+      - run:
+          name: Compiler l'APK
+          command: ./gradlew assembleRelease
+      - store_artifacts:
+          path: app/build/outputs/apk/release/app-release.apk
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
