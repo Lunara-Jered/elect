@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    namespace  "com.example.elect241"
     namespace = "com.example.elect241"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
