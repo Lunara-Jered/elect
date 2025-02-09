@@ -47,7 +47,7 @@ dependencies:
   
 flutter_launcher_icons:
   android: true
-  ios: true
+
   image_path: "assets/icon.png"  # Chemin de ton icône
   adaptive_icon_foreground: "assets/icon.png"
   adaptive_icon_background: "assets/icon.png"
