@@ -77,7 +77,7 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
                         swipeHorizontal: true,
                         autoSpacing: true,
                         pageFling: true,
-                        pageIndex: _searchPage ?? 0, 
+                        initialPage: _searchPage ?? 0, // Correction ici
                       ),
                     ),
                   ],
