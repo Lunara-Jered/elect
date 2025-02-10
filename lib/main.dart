@@ -95,3 +95,57 @@ class BottomNavBar extends StatelessWidget {
 }
 
 
+// 📌 Section des Stories
+class StorySection extends StatelessWidget {
+  const StorySection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    List<Map<String, dynamic>> stories = [
+      {"image": "assets/brice.png", "name": "Brice OLIGUI NGUEMA"},
+      {"image": "assets/murielle.png", "name": "Murielle MINKOUE"},
+      {"image": "assets/seraphin.png", "name": "Séraphin Moundounga"},
+    ];
+
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: stories.length,
+        itemBuilder: (context, index) {
+          var story = stories[index];
+          return GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => StoryPopup(story['image']),
+              );
+            },
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage: AssetImage(story['image']),
+                ),
+                Text(story['name'], style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// 📌 Popup Story
+class StoryPopup extends StatelessWidget {
+  final String media;
+  const StoryPopup(this.media, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      content: Image.asset(media, fit: BoxFit.cover),
+    );
+  }
+}
