@@ -103,8 +103,8 @@ class StorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> stories = [
       {"image": "assets/brice.png", "name": "Brice OLIGUI NGUEMA", "video": "assets/video1.mp4"},
-      {"image": "assets/murielle.png", "name": "Murielle MINKOUE", "video": "assets/video2.mp4"},
-      {"image": "assets/seraphin.png", "name": "Séraphin Moundounga", "video": "assets/video3.mp4"},
+      {"image": "assets/murielle.png", "name": "Murielle MINKOUE", "video": "assets/video4.mp4"},
+      {"image": "assets/seraphin.png", "name": "Séraphin Moundounga", "video": "assets/vid.mp4"},
     ];
 
     return SizedBox(
