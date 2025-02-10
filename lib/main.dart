@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'dart:async';
-import 'package:path/path.dart' as path;
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_pdfview/flutter_pdfview.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:elect241/screens/pdfviewer.dart';
 import 'package:elect241/screens/faqcreen.dart';
 import 'package:elect241/screens/VideoList.dart';
@@ -58,13 +52,20 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Colors.white,
         title: Image.asset("assets/banner.png", height: 40),
       ),
+      body: Column(
+        children: [
+          const StorySection(), // Ajout de la section stories sous l'AppBar
+          Expanded(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: _screens,
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-      ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
       ),
     );
   }
@@ -94,17 +95,16 @@ class BottomNavBar extends StatelessWidget {
   }
 }
 
-
-// 📌 Section des Stories
+// 📌 Section des Stories avec Vidéos
 class StorySection extends StatelessWidget {
   const StorySection({super.key});
 
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> stories = [
-      {"image": "assets/brice.png", "name": "Brice OLIGUI NGUEMA"},
-      {"image": "assets/murielle.png", "name": "Murielle MINKOUE"},
-      {"image": "assets/seraphin.png", "name": "Séraphin Moundounga"},
+      {"image": "assets/brice.png", "name": "Brice OLIGUI NGUEMA", "video": "assets/video1.mp4"},
+      {"image": "assets/murielle.png", "name": "Murielle MINKOUE", "video": "assets/video2.mp4"},
+      {"image": "assets/seraphin.png", "name": "Séraphin Moundounga", "video": "assets/video3.mp4"},
     ];
 
     return SizedBox(
@@ -118,7 +118,7 @@ class StorySection extends StatelessWidget {
             onTap: () {
               showDialog(
                 context: context,
-                builder: (_) => StoryPopup(story['image']),
+                builder: (_) => StoryPopup(videoPath: story['video']),
               );
             },
             child: Column(
@@ -137,15 +137,43 @@ class StorySection extends StatelessWidget {
   }
 }
 
-// 📌 Popup Story
-class StoryPopup extends StatelessWidget {
-  final String media;
-  const StoryPopup(this.media, {super.key});
+// 📌 Popup Video Story
+class StoryPopup extends StatefulWidget {
+  final String videoPath;
+  const StoryPopup({super.key, required this.videoPath});
+
+  @override
+  _StoryPopupState createState() => _StoryPopupState();
+}
+
+class _StoryPopupState extends State<StoryPopup> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.asset(widget.videoPath)
+      ..initialize().then((_) {
+        setState(() {});
+        _controller.play();
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      content: Image.asset(media, fit: BoxFit.cover),
+      content: _controller.value.isInitialized
+          ? AspectRatio(
+              aspectRatio: _controller.value.aspectRatio,
+              child: VideoPlayer(_controller),
+            )
+          : const CircularProgressIndicator(),
     );
   }
 }
