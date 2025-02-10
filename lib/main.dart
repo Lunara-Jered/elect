@@ -84,10 +84,10 @@ class BottomNavBar extends StatelessWidget {
       selectedItemColor: Colors.blue,
       unselectedItemColor: Colors.grey,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: "Lois Électorales"),
+        BottomNavigationBarItem(icon: Icon(Icons.image_aspect_ratio), label: "Actualités"),
         BottomNavigationBarItem(icon: Icon(Icons.video_library), label: "Décryptages"),
         BottomNavigationBarItem(icon: Icon(Icons.chat), label: "FAQ"),
-        BottomNavigationBarItem(icon: Icon(Icons.image_aspect_ratio), label: "Actualités"),
+        BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: "Lois Électorales"),
       ],
       onTap: onItemTapped,
     );
