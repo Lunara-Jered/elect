@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FAQScreen extends StatefulWidget {
   const FAQScreen({super.key});
@@ -9,7 +10,30 @@ class FAQScreen extends StatefulWidget {
 
 class _FAQScreenState extends State<FAQScreen> {
   final TextEditingController _questionController = TextEditingController();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   final Map<String, List<String>> _faqData = {}; // Stocke les questions et réponses
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+  }
+
+  void _initializeNotifications() {
+    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings settings = InitializationSettings(android: androidSettings);
+    _notificationsPlugin.initialize(settings);
+  }
+
+  Future<void> _showNotification(String question) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'faq_channel', 'FAQ Notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    await _notificationsPlugin.show(0, 'Nouvelle réponse', 'Une réponse a été ajoutée à "$question"', details);
+  }
 
   void _addQuestion() {
     String question = _questionController.text.trim();
@@ -26,6 +50,7 @@ class _FAQScreenState extends State<FAQScreen> {
       setState(() {
         _faqData[question]?.add(answer);
       });
+      _showNotification(question);
     }
   }
 
@@ -33,13 +58,11 @@ class _FAQScreenState extends State<FAQScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text("FAQ", style: TextStyle(color: Colors.white, fontSize: 18)),
-          backgroundColor: Colors.blue,
-        ),
-      
+        title: const Text("FAQ", style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ),
       body: Column(
         children: [
-          // 📌 Champ pour poser une question
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -49,9 +72,7 @@ class _FAQScreenState extends State<FAQScreen> {
                     controller: _questionController,
                     decoration: InputDecoration(
                       hintText: "Posez votre question...",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
                   ),
@@ -63,8 +84,6 @@ class _FAQScreenState extends State<FAQScreen> {
               ],
             ),
           ),
-
-          // 📌 Liste des questions et réponses
           Expanded(
             child: ListView.builder(
               itemCount: _faqData.length,
@@ -73,18 +92,12 @@ class _FAQScreenState extends State<FAQScreen> {
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   child: ExpansionTile(
-                    title: Text(
-                      "❓ $question",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    title: Text("❓ $question", style: const TextStyle(fontWeight: FontWeight.bold)),
                     children: [
-                      // 📌 Liste des réponses
                       ..._faqData[question]!.map((answer) => ListTile(
                             title: Text("💬 $answer"),
                             leading: const Icon(Icons.comment, color: Colors.blue),
                           )),
-
-                      // 📌 Champ pour répondre
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Row(
@@ -93,9 +106,7 @@ class _FAQScreenState extends State<FAQScreen> {
                               child: TextField(
                                 decoration: InputDecoration(
                                   hintText: "Votre réponse...",
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                                 onSubmitted: (value) => _addAnswer(question, value),
                               ),
