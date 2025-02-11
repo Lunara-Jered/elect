@@ -25,7 +25,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
   List<int> _searchResults = [];
   PDFViewController? _pdfViewController;
   late PdfDocument _pdfDocument;
-  String _pdfText = "";
 
   @override
   void initState() {
@@ -45,26 +44,15 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
         _isLoading = false;
       });
 
-      // Charger le PDF et extraire le texte
+      // Charger le PDF pour l'analyse du texte
       final pdfBytes = await tempFile.readAsBytes();
       _pdfDocument = PdfDocument(inputBytes: pdfBytes);
-      _extractFullText();
     } catch (e) {
       print("Erreur lors du chargement du PDF : $e");
       setState(() {
         _isLoading = false;
       });
     }
-  }
-
-  void _extractFullText() {
-    String extractedText = "";
-    for (int i = 0; i < _pdfDocument.pages.count; i++) {
-      extractedText += PdfTextExtractor(_pdfDocument).extractText(startPageIndex: i, endPageIndex: i) + "\n\n";
-    }
-    setState(() {
-      _pdfText = extractedText;
-    });
   }
 
   void _searchText(String query) {
@@ -107,12 +95,8 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     }
   }
 
-  Future<void> _speakFullText() async {
-    if (_pdfText.isNotEmpty) {
-      await _flutterTts.speak(_pdfText);
-    } else {
-      await _flutterTts.speak("Aucun texte à lire.");
-    }
+  Future<void> _speakText(String text) async {
+    await _flutterTts.speak(text);
   }
 
   @override
@@ -153,7 +137,7 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
           ],
           IconButton(
             icon: const Icon(Icons.volume_up),
-            onPressed: _speakFullText,
+            onPressed: () => _speakText("Je suis en création..."),
           ),
         ],
       ),
