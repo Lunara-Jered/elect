@@ -108,6 +108,10 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
               icon: const Icon(Icons.arrow_forward),
               onPressed: _nextSearchResult,
             ),
+            IconButton(
+            icon: const Icon(Icons.volume_up),
+            onPressed: () => _speakText("Je suis en création..."),
+          ),
           ],
         ],
       ),
