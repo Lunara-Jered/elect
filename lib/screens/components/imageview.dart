@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_pdf_text/flutter_pdf_text.dart';
+import 'package:pdf_text/pdf_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class PDFViewScreen extends StatefulWidget {
