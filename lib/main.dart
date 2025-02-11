@@ -102,7 +102,7 @@ class StorySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> stories = [
-      {"image": "assets/brice.png", "name": "Joseph Lapensée ESINGONE", "video": "assets/video1.mp4"},
+      {"image": "assets/brice.png", "name": "Joseph Lapensée ESINGONE","image": "assets/Brice.png", "video": "assets/video1.mp4"},
       {"image": "assets/murielle.png", "name": "Steeve ILAHOU", "video": "assets/video4.mp4"},
       {"image": "assets/seraphin.png", "name": "GNINGA CHANNING", "video": "assets/vid.mp4"},
     ];
