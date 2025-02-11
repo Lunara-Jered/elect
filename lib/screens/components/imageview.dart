@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 class PDFViewScreen extends StatefulWidget {
-  final String pdfPath; // 📌 Ex: "assets/pdfs/document.pdf"
-  final String title; // 📌 Ex: "document.pdf"
+  final String pdfPath;
+  final String title;
 
   const PDFViewScreen({super.key, required this.pdfPath, required this.title});
 
@@ -15,7 +15,11 @@ class PDFViewScreen extends StatefulWidget {
 }
 
 class _PDFViewScreenState extends State<PDFViewScreen> {
-  String? localPDFPath; // 📌 Stocke le chemin du PDF copié
+  String? localPDFPath;
+  PdfViewerController pdfController = PdfViewerController();
+  TextEditingController searchController = TextEditingController();
+  List<MatchedItem> searchResults = [];
+  int currentSearchIndex = 0;
 
   @override
   void initState() {
@@ -23,17 +27,11 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     _loadPDF();
   }
 
-  /// 📌 Copie le fichier des assets vers un dossier temporaire pour pouvoir l'afficher
   Future<void> _loadPDF() async {
     try {
-      // 📌 Charge le fichier PDF depuis les assets
       final byteData = await rootBundle.load(widget.pdfPath);
-      
-      // 📌 Récupère un dossier temporaire
       final tempDir = await getTemporaryDirectory();
       final tempFile = File("${tempDir.path}/${widget.title}");
-      
-      // 📌 Écrit les données du fichier
       await tempFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
 
       setState(() {
@@ -44,21 +42,82 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     }
   }
 
+  void _searchText(String query) async {
+    if (query.isEmpty || pdfController == null) return;
+
+    final result = await pdfController.searchText(query);
+    setState(() {
+      searchResults = result;
+      currentSearchIndex = 0;
+    });
+
+    if (searchResults.isNotEmpty) {
+      pdfController.jumpToTextInstance(searchResults[0]);
+    }
+  }
+
+  void _nextSearchResult() {
+    if (searchResults.isEmpty) return;
+    if (currentSearchIndex < searchResults.length - 1) {
+      currentSearchIndex++;
+      pdfController.jumpToTextInstance(searchResults[currentSearchIndex]);
+      setState(() {});
+    }
+  }
+
+  void _previousSearchResult() {
+    if (searchResults.isEmpty) return;
+    if (currentSearchIndex > 0) {
+      currentSearchIndex--;
+      pdfController.jumpToTextInstance(searchResults[currentSearchIndex]);
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Colors.blue,
+        actions: [
+          SizedBox(
+            width: 200,
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: "Rechercher...",
+                border: InputBorder.none,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              onSubmitted: _searchText,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => _searchText(searchController.text),
+          ),
+          if (searchResults.isNotEmpty) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _previousSearchResult,
+            ),
+            Text("${currentSearchIndex + 1} / ${searchResults.length}"),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward),
+              onPressed: _nextSearchResult,
+            ),
+          ],
+        ],
       ),
       body: localPDFPath == null
-          ? const Center(child: CircularProgressIndicator()) // 📌 Affiche un loader le temps que le fichier soit copié
-          : PDFView(
-              filePath: localPDFPath!,
-              enableSwipe: true,
-              swipeHorizontal: false,
-              autoSpacing: true,
-              pageFling: true,
+          ? const Center(child: CircularProgressIndicator())
+          : SfPdfViewer.file(
+              File(localPDFPath!),
+              controller: pdfController,
+              canShowScrollHead: true,
+              canShowPaginationDialog: true,
             ),
     );
   }
