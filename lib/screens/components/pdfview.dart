@@ -4,6 +4,7 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 class PDFViewScreen extends StatefulWidget {
   final String pdfPath;
@@ -20,7 +21,11 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
   bool _isLoading = true;
   final FlutterTts _flutterTts = FlutterTts();
   final TextEditingController _searchController = TextEditingController();
-  int? _searchPage;
+  int _currentSearchIndex = 0;
+  List<int> _searchResults = [];
+  PDFViewController? _pdfViewController;
+  late PdfDocument _pdfDocument;
+  String _pdfText = "";
 
   @override
   void initState() {
@@ -39,6 +44,11 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
         localPDFPath = tempFile.path;
         _isLoading = false;
       });
+
+      // Charger le PDF et extraire le texte
+      final pdfBytes = await tempFile.readAsBytes();
+      _pdfDocument = PdfDocument(inputBytes: pdfBytes);
+      _extractFullText();
     } catch (e) {
       print("Erreur lors du chargement du PDF : $e");
       setState(() {
@@ -47,8 +57,62 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     }
   }
 
-  Future<void> _speakText(String text) async {
-    await _flutterTts.speak(text);
+  void _extractFullText() {
+    String extractedText = "";
+    for (int i = 0; i < _pdfDocument.pages.count; i++) {
+      extractedText += PdfTextExtractor(_pdfDocument).extractText(startPageIndex: i, endPageIndex: i) + "\n\n";
+    }
+    setState(() {
+      _pdfText = extractedText;
+    });
+  }
+
+  void _searchText(String query) {
+    if (query.isEmpty) return;
+
+    _searchResults.clear();
+    for (int i = 0; i < _pdfDocument.pages.count; i++) {
+      String pageText = PdfTextExtractor(_pdfDocument).extractText(startPageIndex: i, endPageIndex: i);
+      if (pageText.contains(query)) {
+        _searchResults.add(i);
+      }
+    }
+
+    setState(() {
+      _currentSearchIndex = 0;
+    });
+
+    if (_searchResults.isNotEmpty && _pdfViewController != null) {
+      _pdfViewController!.setPage(_searchResults[0]);
+    }
+  }
+
+  void _nextSearchResult() {
+    if (_searchResults.isEmpty || _pdfViewController == null) return;
+
+    if (_currentSearchIndex < _searchResults.length - 1) {
+      _currentSearchIndex++;
+      _pdfViewController!.setPage(_searchResults[_currentSearchIndex]);
+      setState(() {});
+    }
+  }
+
+  void _previousSearchResult() {
+    if (_searchResults.isEmpty || _pdfViewController == null) return;
+
+    if (_currentSearchIndex > 0) {
+      _currentSearchIndex--;
+      _pdfViewController!.setPage(_searchResults[_currentSearchIndex]);
+      setState(() {});
+    }
+  }
+
+  Future<void> _speakFullText() async {
+    if (_pdfText.isNotEmpty) {
+      await _flutterTts.speak(_pdfText);
+    } else {
+      await _flutterTts.speak("Aucun texte à lire.");
+    }
   }
 
   @override
@@ -58,9 +122,38 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
         title: Text(widget.pdfName),
         backgroundColor: Colors.blue,
         actions: [
+          SizedBox(
+            width: 200,
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: "Rechercher...",
+                border: InputBorder.none,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              onSubmitted: _searchText,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => _searchText(_searchController.text),
+          ),
+          if (_searchResults.isNotEmpty) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _previousSearchResult,
+            ),
+            Text("${_currentSearchIndex + 1} / ${_searchResults.length}"),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward),
+              onPressed: _nextSearchResult,
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.volume_up),
-            onPressed: () => _speakText("Lecture du document en cours..."),
+            onPressed: _speakFullText,
           ),
         ],
       ),
@@ -68,19 +161,15 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
           ? const Center(child: CircularProgressIndicator())
           : localPDFPath == null
               ? const Center(child: Text("Erreur lors du chargement du fichier"))
-              : Column(
-                  children: [
-                    Expanded(
-                      child: PDFView(
-                        filePath: localPDFPath!,
-                        enableSwipe: true,
-                        swipeHorizontal: true,
-                        autoSpacing: true,
-                        pageFling: true,
-                        defaultPage: _searchPage ?? 0, // Correction ici
-                      ),
-                    ),
-                  ],
+              : PDFView(
+                  filePath: localPDFPath!,
+                  enableSwipe: true,
+                  swipeHorizontal: true,
+                  autoSpacing: true,
+                  pageFling: true,
+                  onViewCreated: (PDFViewController controller) {
+                    _pdfViewController = controller;
+                  },
                 ),
     );
   }
