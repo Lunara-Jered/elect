@@ -4,7 +4,6 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 class PDFViewScreen extends StatefulWidget {
   final String pdfPath;
@@ -24,7 +23,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
   int _currentSearchIndex = 0;
   List<int> _searchResults = [];
   PDFViewController? _pdfViewController;
-  late PdfDocument _pdfDocument;
 
   @override
   void initState() {
@@ -43,10 +41,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
         localPDFPath = tempFile.path;
         _isLoading = false;
       });
-
-      // Charger le PDF pour l'analyse du texte
-      final pdfBytes = await tempFile.readAsBytes();
-      _pdfDocument = PdfDocument(inputBytes: pdfBytes);
     } catch (e) {
       print("Erreur lors du chargement du PDF : $e");
       setState(() {
@@ -57,22 +51,7 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
 
   void _searchText(String query) {
     if (query.isEmpty) return;
-
-    _searchResults.clear();
-    for (int i = 0; i < _pdfDocument.pages.count; i++) {
-      String pageText = PdfTextExtractor(_pdfDocument).extractText(startPageIndex: i, endPageIndex: i);
-      if (pageText.contains(query)) {
-        _searchResults.add(i);
-      }
-    }
-
-    setState(() {
-      _currentSearchIndex = 0;
-    });
-
-    if (_searchResults.isNotEmpty && _pdfViewController != null) {
-      _pdfViewController!.setPage(_searchResults[0]);
-    }
+    // Search functionality could be added here if needed
   }
 
   void _nextSearchResult() {
