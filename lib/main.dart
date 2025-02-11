@@ -108,7 +108,7 @@ class StorySection extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 120,
+      height: 100, // Réduction de la taille des stories
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: stories.length,
@@ -122,12 +122,18 @@ class StorySection extends StatelessWidget {
               );
             },
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 CircleAvatar(
-                  radius: 40,
+                  radius: 30, // Réduction de la taille des avatars
                   backgroundImage: AssetImage(story['image']),
                 ),
-                Text(story['name'], style: const TextStyle(fontSize: 12)),
+                const SizedBox(height: 5), // Espacement
+                Text(
+                  story['name'],
+                  style: const TextStyle(fontSize: 10),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           );
