@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -16,9 +16,13 @@ class PDFViewScreen extends StatefulWidget {
 
 class _PDFViewScreenState extends State<PDFViewScreen> {
   String? localPDFPath;
-  PdfViewerController pdfController = PdfViewerController();
+  int totalPages = 0;
+  int currentPage = 0;
+  PDFViewController? pdfController;
+
+  // Recherche
   TextEditingController searchController = TextEditingController();
-  List<MatchedItem> searchResults = [];
+  List<int> searchResults = []; // Liste des pages contenant le mot
   int currentSearchIndex = 0;
 
   @override
@@ -27,6 +31,7 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     _loadPDF();
   }
 
+  /// 📌 Copie le fichier PDF dans un dossier temporaire
   Future<void> _loadPDF() async {
     try {
       final byteData = await rootBundle.load(widget.pdfPath);
@@ -42,34 +47,48 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     }
   }
 
+  /// 📌 Fonction de recherche dans le PDF (simulée, car PDFView ne supporte pas nativement la recherche)
   void _searchText(String query) async {
-    if (query.isEmpty || pdfController == null) return;
+    if (pdfController == null || query.isEmpty) return;
 
-    final result = await pdfController.searchText(query);
+    // Réinitialise la recherche
     setState(() {
-      searchResults = result;
+      searchResults.clear();
       currentSearchIndex = 0;
     });
 
-    if (searchResults.isNotEmpty) {
-      pdfController.jumpToTextInstance(searchResults[0]);
+    // Simule une recherche (Flutter PDFView ne permet pas encore de chercher dans le texte)
+    // Ici, on suppose que chaque mot-clé peut être trouvé sur n'importe quelle page au hasard (à adapter selon ton besoin)
+    for (int i = 0; i < totalPages; i++) {
+      if (i % 2 == 0) { // Exemple : On simule la présence du mot une page sur deux
+        searchResults.add(i);
+      }
     }
+
+    // Déplace l'utilisateur vers le premier résultat
+    if (searchResults.isNotEmpty) {
+      pdfController?.setPage(searchResults[0]);
+    }
+
+    setState(() {});
   }
 
+  /// 📌 Passe au résultat suivant
   void _nextSearchResult() {
     if (searchResults.isEmpty) return;
     if (currentSearchIndex < searchResults.length - 1) {
       currentSearchIndex++;
-      pdfController.jumpToTextInstance(searchResults[currentSearchIndex]);
+      pdfController?.setPage(searchResults[currentSearchIndex]);
       setState(() {});
     }
   }
 
+  /// 📌 Passe au résultat précédent
   void _previousSearchResult() {
     if (searchResults.isEmpty) return;
     if (currentSearchIndex > 0) {
       currentSearchIndex--;
-      pdfController.jumpToTextInstance(searchResults[currentSearchIndex]);
+      pdfController?.setPage(searchResults[currentSearchIndex]);
       setState(() {});
     }
   }
@@ -79,7 +98,9 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        backgroundColor: Colors.blue,
         actions: [
+          // 📌 Barre de recherche
           SizedBox(
             width: 200,
             child: TextField(
@@ -109,19 +130,65 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
               onPressed: _nextSearchResult,
             ),
           ],
-            IconButton(
-              icon: const Icon(Icons.volume_up),
-              onPressed: () => _speakText("Je suis en création..."),
-          ),
         ],
       ),
       body: localPDFPath == null
           ? const Center(child: CircularProgressIndicator())
-          : SfPdfViewer.file(
-              File(localPDFPath!),
-              controller: pdfController,
-              canShowScrollHead: true,
-              canShowPaginationDialog: true,
+          : Stack(
+              children: [
+                PDFView(
+                  filePath: localPDFPath!,
+                  enableSwipe: true,
+                  swipeHorizontal: false,
+                  autoSpacing: true,
+                  pageFling: true,
+                  onRender: (pages) {
+                    setState(() {
+                      totalPages = pages ?? 0;
+                    });
+                  },
+                  onViewCreated: (PDFViewController controller) {
+                    setState(() {
+                      pdfController = controller;
+                    });
+                  },
+                  onPageChanged: (page, _) {
+                    setState(() {
+                      currentPage = page ?? 0;
+                    });
+                  },
+                ),
+
+                // 📌 Navigation des pages
+                if (totalPages > 1)
+                  Positioned(
+                    bottom: 20,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios),
+                          onPressed: currentPage > 0
+                              ? () {
+                                  pdfController?.setPage(currentPage - 1);
+                                }
+                              : null,
+                        ),
+                        Text("${currentPage + 1} / $totalPages"),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_forward_ios),
+                          onPressed: currentPage < totalPages - 1
+                              ? () {
+                                  pdfController?.setPage(currentPage + 1);
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
     );
   }
