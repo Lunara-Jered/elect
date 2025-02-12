@@ -18,8 +18,7 @@ class _FeedScreenState extends State<FeedScreen> {
   Future<void> _fetchFeedItems() async {
     final response = await Supabase.instance.client
         .from('feed_items')
-        .select()
-        .execute();
+        .select();
     
     if (response.error == null) {
       final data = response.data as List<dynamic>;
