@@ -4,8 +4,6 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 
 class PDFViewScreen extends StatefulWidget {
   final String pdfPath;
@@ -32,30 +30,29 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     _loadPDF();
   }
 
- Future<void> _loadPDF() async {
-  try {
-    final response = await rootBundle.load(widget.pdfPath);
-    if (response.error != null) {
-      throw Exception("Erreur lors du chargement du PDF");
+  Future<void> _loadPDF() async {
+    try {
+      final response = await rootBundle.load(widget.pdfPath);
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File("${tempDir.path}/${widget.pdfName}");
+
+      await tempFile.writeAsBytes(response.buffer.asUint8List(), flush: true);
+
+      setState(() {
+        localPDFPath = tempFile.path;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Erreur lors du chargement du PDF : $e");
+      setState(() {
+        _isLoading = false;
+      });
     }
-
-    final tempDir = await getTemporaryDirectory();
-    final tempFile = File("${tempDir.path}/${widget.title}");
-    await tempFile.writeAsBytes(response.buffer.asUint8List(), flush: true);
-
-    setState(() {
-      localPDFPath = tempFile.path;
-    });
-  } catch (e) {
-    print("Erreur lors du chargement du PDF : $e");
   }
-}
-
-
 
   void _searchText(String query) {
     if (query.isEmpty) return;
-    // Search functionality could be added here if needed
+    // Implémentation de la recherche à ajouter
   }
 
   void _nextSearchResult() {
@@ -63,7 +60,7 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
 
     if (_currentSearchIndex < _searchResults.length - 1) {
       _currentSearchIndex++;
-      _pdfViewController!.setPage(_searchResults[_currentSearchIndex]);
+      _pdfViewController?.setPage(_searchResults[_currentSearchIndex]);
       setState(() {});
     }
   }
@@ -73,7 +70,7 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
 
     if (_currentSearchIndex > 0) {
       _currentSearchIndex--;
-      _pdfViewController!.setPage(_searchResults[_currentSearchIndex]);
+      _pdfViewController?.setPage(_searchResults[_currentSearchIndex]);
       setState(() {});
     }
   }
