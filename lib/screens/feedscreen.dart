@@ -62,11 +62,6 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 }
 
-// ... (rest of the code remains the same)
-
-
-
-// 📌 Widget pour afficher une image cliquable vers un PDF
 class ImageItem extends StatelessWidget {
   final String imagePath;
   final String pdfPath;
@@ -118,7 +113,6 @@ class ImageItem extends StatelessWidget {
   }
 }
 
-
 class PDFViewScreen extends StatefulWidget {
   final String pdfPath;
   final String title;
@@ -135,9 +129,8 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
   int currentPage = 0;
   PDFViewController? pdfController;
 
-  // Recherche
   TextEditingController searchController = TextEditingController();
-  List<int> searchResults = []; // Liste des pages contenant le mot
+  List<int> searchResults = []; 
   int currentSearchIndex = 0;
 
   @override
@@ -146,7 +139,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     _loadPDF();
   }
 
-  /// 📌 Copie le fichier PDF dans un dossier temporaire
   Future<void> _loadPDF() async {
     try {
       final byteData = await rootBundle.load(widget.pdfPath);
@@ -162,25 +154,20 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     }
   }
 
-  /// 📌 Fonction de recherche dans le PDF (simulée, car PDFView ne supporte pas nativement la recherche)
   void _searchText(String query) async {
     if (pdfController == null || query.isEmpty) return;
 
-    // Réinitialise la recherche
     setState(() {
       searchResults.clear();
       currentSearchIndex = 0;
     });
 
-    // Simule une recherche (Flutter PDFView ne permet pas encore de chercher dans le texte)
-    // Ici, on suppose que chaque mot-clé peut être trouvé sur n'importe quelle page au hasard (à adapter selon ton besoin)
     for (int i = 0; i < totalPages; i++) {
-      if (i % 2 == 0) { // Exemple : On simule la présence du mot une page sur deux
+      if (i % 2 == 0) { 
         searchResults.add(i);
       }
     }
 
-    // Déplace l'utilisateur vers le premier résultat
     if (searchResults.isNotEmpty) {
       pdfController?.setPage(searchResults[0]);
     }
@@ -188,7 +175,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     setState(() {});
   }
 
-  /// 📌 Passe au résultat suivant
   void _nextSearchResult() {
     if (searchResults.isEmpty) return;
     if (currentSearchIndex < searchResults.length - 1) {
@@ -198,7 +184,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     }
   }
 
-  /// 📌 Passe au résultat précédent
   void _previousSearchResult() {
     if (searchResults.isEmpty) return;
     if (currentSearchIndex > 0) {
@@ -215,7 +200,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
         title: Text(widget.title),
         backgroundColor: Colors.blue,
         actions: [
-          // 📌 Barre de recherche
           SizedBox(
             width: 200,
             child: TextField(
@@ -273,8 +257,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
                     });
                   },
                 ),
-
-                // 📌 Navigation des pages
                 if (totalPages > 1)
                   Positioned(
                     bottom: 20,
@@ -308,7 +290,6 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
     );
   }
 }
-
 
 class VideoPlayerScreen extends StatefulWidget {
   final String videoPath;
