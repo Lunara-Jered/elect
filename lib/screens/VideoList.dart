@@ -17,22 +17,22 @@ class _VideoListPageState extends State<VideoListPage> {
   }
 
   // Fonction pour récupérer les vidéos depuis Supabase
-Future<void> fetchVideos() async {
-  final response = await Supabase.instance.client
-      .from('videos')
-      .select();
+  Future<void> fetchVideos() async {
+    final response = await Supabase.instance.client
+        .from('videos')
+        .select()
+        .execute();  // Correction : appeler execute() au lieu de from.select()
 
-  if (response.error == null) {
-    setState(() {
-      videos = List<Map<String, String>>.from(response.data);
-      filteredVideos = videos;
-    });
-  } else {
-    print('Erreur de récupération des vidéos: ${response.error!.message}');
+    if (response.error == null) {
+      setState(() {
+        // Vérification que response.data est une liste de Map
+        videos = List<Map<String, String>>.from(response.data as List);
+        filteredVideos = videos;
+      });
+    } else {
+      print('Erreur de récupération des vidéos: ${response.error!.message}');
+    }
   }
-}
-
-
 
   void searchVideos(String query) {
     setState(() {
@@ -50,6 +50,8 @@ Future<void> fetchVideos() async {
       _speech.listen(onResult: (result) {
         searchVideos(result.recognizedWords);
       });
+    } else {
+      print('Speech recognition not available');
     }
   }
 
@@ -61,7 +63,10 @@ Future<void> fetchVideos() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Décryptages', style: TextStyle(color: Colors.white, fontSize: 18)), backgroundColor: Colors.blue),
+      appBar: AppBar(
+        title: Text('Décryptages', style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ),
       body: Column(
         children: [
           Padding(
@@ -133,9 +138,13 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   void initState() {
     super.initState();
-   _controller = VideoPlayerController.network(widget.videoPath)
-      ..initialize().then((_) => setState(() {})).catchError((error) => setState(() => _hasError = true));
-
+    _controller = VideoPlayerController.network(widget.videoPath)
+      ..initialize().then((_) => setState(() {})).catchError((error) {
+        setState(() {
+          _hasError = true;
+        });
+        print('Erreur de chargement de la vidéo : $error');
+      });
   }
 
   @override
@@ -149,7 +158,15 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return Scaffold(
       appBar: AppBar(title: Text('Décryptages')),
       body: _hasError
-          ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.error, color: Colors.red, size: 50), Text('Erreur de chargement de la vidéo', style: TextStyle(fontSize: 18))]))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, color: Colors.red, size: 50),
+                  Text('Erreur de chargement de la vidéo', style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            )
           : Center(
               child: _controller.value.isInitialized
                   ? AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller))
