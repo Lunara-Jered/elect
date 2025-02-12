@@ -17,21 +17,27 @@ class _VideoListPageState extends State<VideoListPage> {
   }
 
   // Fonction pour récupérer les vidéos depuis Supabase
-  Future<void> fetchVideos() async {
-    final response = await Supabase.instance.client
+Future<void> fetchVideos() async {
+  try {
+    final List<dynamic> response = await Supabase.instance.client
         .from('videos')
-        .select();  // Correction : appeler execute() au lieu de from.select()
+        .select(); // Pas besoin de `.execute()`
 
-    if (response.error == null) {
-      setState(() {
-        // Vérification que response.data est une liste de Map
-        videos = List<Map<String, String>>.from(response.data as List);
-        filteredVideos = videos;
-      });
-    } else {
-      print('Erreur de récupération des vidéos: ${response.error!.message}');
-    }
+    setState(() {
+      // Vérifie que chaque élément est bien une Map<String, dynamic>
+      videos = response.map((video) => {
+            'title': video['title'] as String? ?? '',
+            'thumbnail': video['thumbnail'] as String? ?? '',
+            'video_path': video['video_path'] as String? ?? '',
+          }).toList();
+
+      filteredVideos = videos;
+    });
+  } catch (e) {
+    print('Erreur de récupération des vidéos: $e');
   }
+}
+
 
   void searchVideos(String query) {
     setState(() {
