@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 class FAQScreen extends StatefulWidget {
   const FAQScreen({super.key});
@@ -17,6 +19,7 @@ class _FAQScreenState extends State<FAQScreen> {
   void initState() {
     super.initState();
     _initializeNotifications();
+    _loadFAQData(); // Charger les données depuis Supabase
   }
 
   void _initializeNotifications() {
@@ -35,22 +38,57 @@ class _FAQScreenState extends State<FAQScreen> {
     await _notificationsPlugin.show(0, 'Nouvelle réponse', 'Une réponse a été ajoutée à "$question"', details);
   }
 
-  void _addQuestion() {
-    String question = _questionController.text.trim();
-    if (question.isNotEmpty) {
+  Future<void> _loadFAQData() async {
+    final response = await Supabase.instance.client
+        .from('faq')
+        .select()
+        .execute();
+
+    if (response.error == null) {
+      final List data = response.data;
       setState(() {
-        _faqData[question] = [];
+        _faqData.clear();
+        for (var item in data) {
+          _faqData[item['question']] = List<String>.from(item['answer']);
+        }
       });
-      _questionController.clear();
     }
   }
 
-  void _addAnswer(String question, String answer) {
+  Future<void> _addQuestion() async {
+    String question = _questionController.text.trim();
+    if (question.isNotEmpty) {
+      final response = await Supabase.instance.client
+          .from('faq')
+          .insert([
+            {'question': question, 'answer': []}
+          ])
+          .execute();
+
+      if (response.error == null) {
+        setState(() {
+          _faqData[question] = [];
+        });
+        _questionController.clear();
+      }
+    }
+  }
+
+  Future<void> _addAnswer(String question, String answer) async {
     if (answer.isNotEmpty) {
-      setState(() {
-        _faqData[question]?.add(answer);
-      });
-      _showNotification(question);
+      final response = await Supabase.instance.client
+          .from('faq')
+          .upsert([
+            {'question': question, 'answer': [_faqData[question], answer]}
+          ])
+          .execute();
+
+      if (response.error == null) {
+        setState(() {
+          _faqData[question]?.add(answer);
+        });
+        _showNotification(question);
+      }
     }
   }
 
