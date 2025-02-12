@@ -9,7 +9,7 @@ android {
     namespace = "com.example.elect241"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-    multiDexEnabled true
+    
 
 
     compileOptions {
@@ -31,6 +31,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         namespace  "com.example.elect241"
+        multiDexEnabled true
     }
 
     buildTypes {
