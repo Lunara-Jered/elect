@@ -32,10 +32,22 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
 
   Future<void> _loadPDF() async {
     try {
-      final byteData = await rootBundle.load(widget.pdfPath);
+      final response = await Supabase.instance.client
+          .storage
+          .from('pdf_files') // Nom de votre bucket
+          .download(widget.pdfPath); // Utilisez le chemin du fichier depuis Supabase
+
+      if (response.error != null) {
+        print("Erreur de téléchargement : ${response.error!.message}");
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final byteData = response.data!;
       final tempDir = await getTemporaryDirectory();
       final tempFile = File("${tempDir.path}/${widget.pdfName}");
-      await tempFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+
+      await tempFile.writeAsBytes(byteData, flush: true);
 
       setState(() {
         localPDFPath = tempFile.path;
@@ -43,11 +55,10 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
       });
     } catch (e) {
       print("Erreur lors du chargement du PDF : $e");
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
+
 
   void _searchText(String query) {
     if (query.isEmpty) return;
