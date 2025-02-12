@@ -29,30 +29,30 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
   }
 
   // 📌 Charge les fichiers PDF depuis Supabase
-  Future<void> _fetchPDFFilesFromDatabase() async {
-    try {
-      setState(() => _isLoading = true);
+ Future<void> _fetchPDFFilesFromDatabase() async {
+  try {
+    setState(() => _isLoading = true);
 
-      final response = await Supabase.instance.client
-          .from('pdf_files') // Assuming the table name is 'pdf_files'
-          .select('file_url'); // Assuming the column name is 'file_url'
-     
+    final List<Map<String, dynamic>> response = await Supabase.instance.client
+        .from('pdf_files') // Nom correct de la table
+        .select('file_url'); // Nom correct de la colonne
 
-      if (response.error == null) {
-        final List<String> fetchedFiles = List<String>.from(response.data.map((item) => item['file_url']));
-        setState(() {
-          _pdfFiles = fetchedFiles;
-          _filteredFiles = _pdfFiles;
-        });
-      } else {
-        print('Error fetching PDFs: ${response.error!.message}');
-      }
-    } catch (e) {
-      print("Error during PDF fetch: $e");
-    } finally {
-      setState(() => _isLoading = false);
+    // ✅ Vérifier si des données existent
+    if (response.isNotEmpty) {
+      final List<String> fetchedFiles = response.map((item) => item['file_url'] as String).toList();
+      setState(() {
+        _pdfFiles = fetchedFiles;
+        _filteredFiles = _pdfFiles;
+      });
+    } else {
+      print('Aucun fichier trouvé dans la base de données.');
     }
+  } catch (e) {
+    print("Erreur lors de la récupération des PDFs: $e");
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   // 📌 Filtre les fichiers en fonction de la recherche
   void _filterFiles(String query) {
