@@ -17,11 +17,10 @@ class _VideoListPageState extends State<VideoListPage> {
   }
 
   // Fonction pour récupérer les vidéos depuis Supabase
- Future<void> fetchVideos() async {
+Future<void> fetchVideos() async {
   final response = await Supabase.instance.client
       .from('videos')
-      .select()
-      .execute();
+      .select();
 
   if (response.error == null) {
     setState(() {
@@ -32,6 +31,7 @@ class _VideoListPageState extends State<VideoListPage> {
     print('Erreur de récupération des vidéos: ${response.error!.message}');
   }
 }
+
 
 
   void searchVideos(String query) {
