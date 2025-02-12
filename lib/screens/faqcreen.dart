@@ -40,8 +40,7 @@ class _FAQScreenState extends State<FAQScreen> {
   Future<void> _loadFAQData() async {
     final response = await Supabase.instance.client
         .from('faq')
-        .select()
-        .execute();
+        .select();
 
     if (response.error == null) {
       final List data = response.data;
