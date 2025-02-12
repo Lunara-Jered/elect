@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:elect241/screens/pdfviewer.dart';
 import 'package:elect241/screens/faqcreen.dart';
 import 'package:elect241/screens/VideoList.dart';
 import 'package:elect241/screens/feedscreen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Supabase.initialize(
+    url: 'https://leuxlvlrpumzmgkyqtfd.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxldXhsdmxycHVtem1na3lxdGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkzNjI4MjcsImV4cCI6MjA1NDkzODgyN30.JNSdrlOvmPRKBNE3J1bucZOWrqIkA3zteGnPu1Wgzkw',
+  );
+
   runApp(const Elect241App());
 }
+
 
 class Elect241App extends StatelessWidget {
   const Elect241App({super.key});
