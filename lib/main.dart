@@ -4,6 +4,7 @@ import 'package:elect241/screens/pdfviewer.dart';
 import 'package:elect241/screens/faqcreen.dart';
 import 'package:elect241/screens/VideoList.dart';
 import 'package:elect241/screens/feedscreen.dart';
+import 'package:video_player/video_player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
