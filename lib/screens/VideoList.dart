@@ -20,8 +20,7 @@ class _VideoListPageState extends State<VideoListPage> {
   Future<void> fetchVideos() async {
     final response = await Supabase.instance.client
         .from('videos')
-        .select()
-        .execute();  // Correction : appeler execute() au lieu de from.select()
+        .select();  // Correction : appeler execute() au lieu de from.select()
 
     if (response.error == null) {
       setState(() {
