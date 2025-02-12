@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 class FAQScreen extends StatefulWidget {
   const FAQScreen({super.key});
 
@@ -52,6 +51,8 @@ class _FAQScreenState extends State<FAQScreen> {
           _faqData[item['question']] = List<String>.from(item['answer']);
         }
       });
+    } else {
+      print('Erreur: ${response.error!.message}');
     }
   }
 
@@ -76,18 +77,21 @@ class _FAQScreenState extends State<FAQScreen> {
 
   Future<void> _addAnswer(String question, String answer) async {
     if (answer.isNotEmpty) {
+      // Ajoutez la nouvelle réponse à la liste existante des réponses
+      final updatedAnswers = List<String>.from(_faqData[question]!)..add(answer);
+      
       final response = await Supabase.instance.client
           .from('faq')
           .upsert([
-            {'question': question, 'answer': [_faqData[question], answer]}
+            {'question': question, 'answer': updatedAnswers}
           ])
           .execute();
 
       if (response.error == null) {
         setState(() {
-          _faqData[question]?.add(answer);
+          _faqData[question] = updatedAnswers;
         });
-        _showNotification(question);
+        _showNotification(question);  // Notification après l'ajout de la réponse
       }
     }
   }
