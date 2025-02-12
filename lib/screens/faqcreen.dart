@@ -68,7 +68,7 @@ class _FAQScreenState extends State<FAQScreen> {
         });
         _questionController.clear();
       } catch (error) {
-        print("Erreur lors de l'ajout de la question : "$error"");
+        print("Erreur lors de l'ajout de la question : $error");
       }
     }
   }
@@ -88,7 +88,7 @@ class _FAQScreenState extends State<FAQScreen> {
         });
         _showNotification(question);
       } catch (error) {
-        print("Erreur lors de l'ajout de la réponse : "$error"");
+        print("Erreur lors de l'ajout de la réponse : $error");
       }
     }
   }
