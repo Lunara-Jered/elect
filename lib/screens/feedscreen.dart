@@ -3,22 +3,34 @@ import 'dart:io';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
-
-class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key});
-
-  @override
-  _FeedScreenState createState() => _FeedScreenState();
-}
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:video_player/video_player.dart';
 
 class _FeedScreenState extends State<FeedScreen> {
-  List<Map<String, String>> feedItems = [
-    {"image": "assets/images/election.png", "pdf": "assets/pdfs/date.pdf"},
-    {"image": "assets/images/elect.jpeg", "pdf": "assets/pdfs/date.pdf"},
-    {"image": "assets/images/elect.png", "pdf": "assets/pdfs/elect.pdf"},
-    {"image": "assets/images/all.png", "pdf": "assets/pdfs/elect.pdf"},
-    // Suppression de l'élément vidéo
-  ];
+  List<Map<String, String>> feedItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFeedItems();
+  }
+
+  Future<void> _fetchFeedItems() async {
+    final response = await Supabase.instance.client.from('feed_items').select().execute();
+    if (response.error == null) {
+      final data = response.data as List<dynamic>;
+      setState(() {
+        feedItems = data.map((item) {
+          return {
+            "image": item['image_url'] ?? '',
+            "pdf": item['pdf_url'] ?? '',
+            "video": item['video_url'] ?? '',
+            "type": item['type'] ?? ''
+          };
+        }).toList();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +45,12 @@ class _FeedScreenState extends State<FeedScreen> {
           itemCount: feedItems.length,
           itemBuilder: (context, index) {
             final item = feedItems[index];
-            return ImageItem(imagePath: item["image"]!, pdfPath: item["pdf"]!);
+            return ImageItem(
+              imagePath: item["image"]!,
+              pdfPath: item["pdf"]!,
+              videoPath: item["video"]!,
+              type: item["type"]!,
+            );
           },
         ),
       ),
@@ -41,12 +58,15 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 }
 
+
 // 📌 Widget pour afficher une image cliquable vers un PDF
 class ImageItem extends StatelessWidget {
   final String imagePath;
   final String pdfPath;
+  final String videoPath;
+  final String type;
 
-  const ImageItem({required this.imagePath, required this.pdfPath});
+  const ImageItem({required this.imagePath, required this.pdfPath, required this.videoPath, required this.type});
 
   @override
   Widget build(BuildContext context) {
@@ -54,16 +74,25 @@ class ImageItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 15),
       child: GestureDetector(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PDFViewScreen(pdfPath: pdfPath, title: "Document PDF"),
-            ),
-          );
+          if (type == 'pdf') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PDFViewScreen(pdfPath: pdfPath, title: "Document PDF"),
+              ),
+            );
+          } else if (type == 'video') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VideoPlayerScreen(videoPath: videoPath),
+              ),
+            );
+          }
         },
         child: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.asset(
+          child: Image.network(
             imagePath,
             width: double.infinity,
             height: 180,
@@ -81,6 +110,7 @@ class ImageItem extends StatelessWidget {
     );
   }
 }
+
 
 class PDFViewScreen extends StatefulWidget {
   final String pdfPath;
@@ -269,5 +299,50 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
               ],
             ),
     );
+  }
+}
+
+
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoPath;
+
+  const VideoPlayerScreen({super.key, required this.videoPath});
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.videoPath)
+      ..initialize().then((_) {
+        setState(() {});
+        _controller.play();
+      });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Vidéo")),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+            : const CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
   }
 }
