@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:elect241/screens/components/pdfview.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PDFViewerSection extends StatefulWidget {
   const PDFViewerSection({super.key});
@@ -25,32 +25,36 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
-    getFiles();
+    _fetchPDFFilesFromDatabase(); // Get PDF files from Supabase
   }
 
-  /// 📌 Charge les fichiers PDF depuis les assets
-  Future<void> getFiles() async {
+  // 📌 Charge les fichiers PDF depuis Supabase
+  Future<void> _fetchPDFFilesFromDatabase() async {
     try {
       setState(() => _isLoading = true);
 
-      String manifestContent = await rootBundle.loadString('AssetManifest.json');
-      Map<String, dynamic> manifestMap = json.decode(manifestContent);
+      final response = await Supabase.instance.client
+          .from('pdf_files') // Assuming the table name is 'pdf_files'
+          .select('file_url') // Assuming the column name is 'file_url'
+          .execute();
 
-      List<String> assetPaths =
-          manifestMap.keys.where((String key) => key.endsWith('.pdf')).toList();
-
-      setState(() {
-        _pdfFiles = assetPaths;
-        _filteredFiles = _pdfFiles;
-        _isLoading = false;
-      });
+      if (response.error == null) {
+        final List<String> fetchedFiles = List<String>.from(response.data.map((item) => item['file_url']));
+        setState(() {
+          _pdfFiles = fetchedFiles;
+          _filteredFiles = _pdfFiles;
+        });
+      } else {
+        print('Error fetching PDFs: ${response.error!.message}');
+      }
     } catch (e) {
-      print("Erreur lors de la récupération des fichiers : $e");
+      print("Error during PDF fetch: $e");
+    } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  /// 📌 Filtre les fichiers en fonction de la recherche
+  // 📌 Filtre les fichiers en fonction de la recherche
   void _filterFiles(String query) {
     setState(() {
       _filteredFiles = query.isEmpty
@@ -62,11 +66,11 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
     });
   }
 
-  /// 📌 Démarre la reconnaissance vocale
+  // 📌 Démarre la reconnaissance vocale
   Future<void> _startListening() async {
     bool available = await _speech.initialize(
-      onStatus: (status) => print("Statut : $status"),
-      onError: (error) => print("Erreur : $error"),
+      onStatus: (status) => print("Status: $status"),
+      onError: (error) => print("Error: $error"),
     );
 
     if (available) {
@@ -82,7 +86,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
     }
   }
 
-  /// 📌 Arrête la reconnaissance vocale
+  // 📌 Arrête la reconnaissance vocale
   void _stopListening() {
     setState(() => _isListening = false);
     _speech.stop();
@@ -182,7 +186,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(() => getFiles()),
+        onPressed: () => setState(() => _fetchPDFFilesFromDatabase()),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         child: const Icon(Icons.refresh),
