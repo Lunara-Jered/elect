@@ -3,6 +3,10 @@ import 'package:video_player/video_player.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class VideoListPage extends StatefulWidget {
+  @override
+  _VideoListPageState createState() => _VideoListPageState();
+}
 class _VideoListPageState extends State<VideoListPage> {
   List<Map<String, String>> videos = [];
   List<Map<String, String>> filteredVideos = [];
