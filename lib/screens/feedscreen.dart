@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 class _FeedScreenState extends State<FeedScreen> {
-  List<Map<String, String>> feedItems = [];
+  List<Map<String, dynamic>> feedItems = [];
 
   @override
   void initState() {
@@ -16,7 +16,11 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Future<void> _fetchFeedItems() async {
-    final response = await Supabase.instance.client.from('feed_items').select().execute();
+    final response = await Supabase.instance.client
+        .from('feed_items')
+        .select()
+        .execute();
+    
     if (response.error == null) {
       final data = response.data as List<dynamic>;
       setState(() {
@@ -57,6 +61,9 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 }
+
+// ... (rest of the code remains the same)
+
 
 
 // 📌 Widget pour afficher une image cliquable vers un PDF
