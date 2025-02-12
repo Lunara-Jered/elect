@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:path/path.dart' as path;
+import 'dart:convert';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+
+
+
+
+
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -205,3 +217,754 @@ class _StoryPopupState extends State<StoryPopup> {
     );
   }
 }
+
+
+
+class FAQScreen extends StatefulWidget {
+  const FAQScreen({super.key});
+
+  @override
+  _FAQScreenState createState() => _FAQScreenState();
+}
+
+class _FAQScreenState extends State<FAQScreen> {
+  final TextEditingController _questionController = TextEditingController();
+  final TextEditingController _answerController = TextEditingController();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  final Map<String, List<String>> _faqData = {}; // Stocke les questions et réponses
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+    _loadFAQData();
+  }
+
+  void _initializeNotifications() {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings settings =
+        InitializationSettings(android: androidSettings);
+    _notificationsPlugin.initialize(settings);
+  }
+
+  Future<void> _showNotification(String question) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'faq_channel',
+      'FAQ Notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+    await _notificationsPlugin.show(
+        0, 'Nouvelle réponse', 'Une réponse a été ajoutée à "$question"', details);
+  }
+
+  Future<void> _loadFAQData() async {
+    final response = await Supabase.instance.client.from('faq').select();
+
+    if (response.isNotEmpty) {
+      setState(() {
+        _faqData.clear();
+        for (var item in response) {
+          _faqData[item['question']] =
+              (item['answer'] as List<dynamic>).map((e) => e.toString()).toList();
+        }
+      });
+    } else {
+      print('Erreur lors du chargement des FAQ');
+    }
+  }
+
+  Future<void> _addQuestion() async {
+    String question = _questionController.text.trim();
+    if (question.isNotEmpty && !_faqData.containsKey(question)) {
+      final response = await Supabase.instance.client.from('faq').insert([
+        {'question': question, 'answer': []}
+      ]);
+
+      if (!response.error) {
+        setState(() {
+          _faqData[question] = [];
+        });
+        _questionController.clear();
+      } else {
+        print("Erreur lors de l'ajout de la question");
+      }
+    }
+  }
+
+  Future<void> _addAnswer(String question) async {
+    String answer = _answerController.text.trim();
+    if (answer.isNotEmpty) {
+      final updatedAnswers = [..._faqData[question]!, answer];
+
+      final response = await Supabase.instance.client.from('faq').update({
+        'answer': updatedAnswers
+      }).eq('question', question);
+
+      if (!response.error) {
+        setState(() {
+          _faqData[question] = updatedAnswers;
+        });
+        _answerController.clear();
+        _showNotification(question);
+      } else {
+        print("Erreur lors de l'ajout de la réponse");
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("FAQ",
+            style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _questionController,
+                    decoration: InputDecoration(
+                      hintText: "Posez votre question...",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue),
+                  onPressed: _addQuestion,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _faqData.length,
+              itemBuilder: (context, index) {
+                String question = _faqData.keys.elementAt(index);
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  child: ExpansionTile(
+                    title: Text("❓ $question",
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold)),
+                    children: [
+                      ..._faqData[question]!.map((answer) => ListTile(
+                            title: Text("💬 $answer"),
+                            leading:
+                                const Icon(Icons.comment, color: Colors.blue),
+                          )),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _answerController,
+                                decoration: InputDecoration(
+                                  hintText: "Votre réponse...",
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.send, color: Colors.green),
+                              onPressed: () {
+                                _addAnswer(question);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class PDFViewerSection extends StatefulWidget {
+  const PDFViewerSection({super.key});
+
+  @override
+  State<PDFViewerSection> createState() => _PDFViewerSectionState();
+}
+
+class _PDFViewerSectionState extends State<PDFViewerSection> {
+  List<String> _pdfFiles = [];
+  List<String> _filteredFiles = [];
+  bool _isSearching = false;
+  bool _isLoading = true;
+  bool _isListening = false;
+  late stt.SpeechToText _speech;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+    _fetchPDFFilesFromDatabase(); // Get PDF files from Supabase
+  }
+
+  // 📌 Charge les fichiers PDF depuis Supabase
+ Future<void> _fetchPDFFilesFromDatabase() async {
+  try {
+    setState(() => _isLoading = true);
+
+    final List<Map<String, dynamic>> response = await Supabase.instance.client
+        .from('pdf_files') // Nom correct de la table
+        .select('file_url'); // Nom correct de la colonne
+
+    // ✅ Vérifier si des données existent
+    if (response.isNotEmpty) {
+      final List<String> fetchedFiles = response.map((item) => item['file_url'] as String).toList();
+      setState(() {
+        _pdfFiles = fetchedFiles;
+        _filteredFiles = _pdfFiles;
+      });
+    } else {
+      print('Aucun fichier trouvé dans la base de données.');
+    }
+  } catch (e) {
+    print("Erreur lors de la récupération des PDFs: $e");
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
+
+  // 📌 Filtre les fichiers en fonction de la recherche
+  void _filterFiles(String query) {
+    setState(() {
+      _filteredFiles = query.isEmpty
+          ? _pdfFiles
+          : _pdfFiles
+              .where((file) =>
+                  path.basename(file).toLowerCase().contains(query.toLowerCase()))
+              .toList();
+    });
+  }
+
+  // 📌 Démarre la reconnaissance vocale
+  Future<void> _startListening() async {
+    bool available = await _speech.initialize(
+      onStatus: (status) => print("Status: $status"),
+      onError: (error) => print("Error: $error"),
+    );
+
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _searchController.text = result.recognizedWords;
+            _filterFiles(_searchController.text);
+          });
+        },
+      );
+    }
+  }
+
+  // 📌 Arrête la reconnaissance vocale
+  void _stopListening() {
+    setState(() => _isListening = false);
+    _speech.stop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Lois électorales",
+            style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                _filteredFiles = _pdfFiles;
+                _searchController.clear();
+              });
+            },
+            icon: Icon(_isSearching ? Icons.cancel : Icons.search),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Champ de recherche en haut de la liste
+          if (_isSearching)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _filterFiles,
+                decoration: InputDecoration(
+                  labelText: 'Rechercher',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                    onPressed: _isListening ? _stopListening : _startListening,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+              ),
+            ),
+
+          // Liste des fichiers PDF
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredFiles.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "Aucun fichier PDF trouvé",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _filteredFiles.length,
+                        itemBuilder: (context, index) {
+                          String filePath = _filteredFiles[index];
+                          String fileName = path.basename(filePath);
+                          return Card(
+                            color: Colors.white,
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            child: ListTile(
+                              title: Text(fileName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              leading: const Icon(Icons.picture_as_pdf,
+                                  color: Colors.red, size: 30),
+                              trailing:
+                                  const Icon(Icons.arrow_forward_ios, size: 18),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PDFViewScreen(
+                                        pdfPath: filePath, pdfName: fileName),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => setState(() => _fetchPDFFilesFromDatabase()),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.refresh),
+      ),
+    );
+  }
+}
+
+
+class FeedScreen extends StatefulWidget {
+  @override
+  _FeedScreenState createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends State<FeedScreen> {
+  List<Map<String, dynamic>> feedItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFeedItems();
+  }
+
+  Future<void> _fetchFeedItems() async {
+    try {
+      final response = await Supabase.instance.client.from('feed_items').select();
+      if (response.isNotEmpty) {
+        setState(() {
+          feedItems = response.map((item) => {
+            "image": item['image_url'] ?? '',
+            "pdf": item['pdf_url'] ?? '',
+            "video": item['video_url'] ?? '',
+            "type": item['type'] ?? ''
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print("Erreur de récupération des données : $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ),
+      body: feedItems.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: ListView.builder(
+                itemCount: feedItems.length,
+                itemBuilder: (context, index) {
+                  final item = feedItems[index];
+                  return ImageItem(
+                    imagePath: item["image"]!,
+                    pdfPath: item["pdf"]!,
+                    videoPath: item["video"]!,
+                    type: item["type"]!,
+                  );
+                },
+              ),
+            ),
+    );
+  }
+}
+
+class ImageItem extends StatelessWidget {
+  final String imagePath;
+  final String pdfPath;
+  final String videoPath;
+  final String type;
+
+  const ImageItem({required this.imagePath, required this.pdfPath, required this.videoPath, required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: GestureDetector(
+        onTap: () {
+          if (type == 'pdf') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PDFViewScreen(pdfPath: pdfPath, title: "Document PDF"),
+              ),
+            );
+          } else if (type == 'video') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VideoPlayerScreen(videoPath: videoPath),
+              ),
+            );
+          }
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            imagePath,
+            width: double.infinity,
+            height: 180,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: 180,
+                color: Colors.grey,
+                child: const Center(child: Icon(Icons.broken_image, size: 50, color: Colors.white)),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PDFViewScreen extends StatelessWidget {
+  final String pdfPath;
+  final String title;
+
+  const PDFViewScreen({required this.pdfPath, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: PDFView(
+        filePath: pdfPath,
+      ),
+    );
+  }
+}
+
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoPath;
+
+  const VideoPlayerScreen({required this.videoPath});
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.videoPath)
+      ..initialize().then((_) {
+        setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Lecture Vidéo")),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+            : const CircularProgressIndicator(),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _controller.value.isPlaying ? _controller.pause() : _controller.play();
+          });
+        },
+        child: Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+      ),
+    );
+  }
+}
+
+
+class VideoListPage extends StatefulWidget {
+  @override
+  _VideoListPageState createState() => _VideoListPageState();
+}
+class _VideoListPageState extends State<VideoListPage> {
+  List<Map<String, String>> videos = [];
+  List<Map<String, String>> filteredVideos = [];
+  stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  String _searchText = "";
+
+  @override
+  void initState() {
+    super.initState();
+    fetchVideos(); // Charge les vidéos depuis Supabase
+  }
+
+  // Fonction pour récupérer les vidéos depuis Supabase
+Future<void> fetchVideos() async {
+  try {
+    final List<dynamic> response = await Supabase.instance.client
+        .from('videos')
+        .select(); // Pas besoin de `.execute()`
+
+    setState(() {
+      // Vérifie que chaque élément est bien une Map<String, dynamic>
+      videos = response.map((video) => {
+            'title': video['title'] as String? ?? '',
+            'thumbnail': video['thumbnail'] as String? ?? '',
+            'video_path': video['video_path'] as String? ?? '',
+          }).toList();
+
+      filteredVideos = videos;
+    });
+  } catch (e) {
+    print('Erreur de récupération des vidéos: $e');
+  }
+}
+
+
+  void searchVideos(String query) {
+    setState(() {
+      _searchText = query;
+      filteredVideos = videos
+          .where((video) => video['title']!.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  void startListening() async {
+    bool available = await _speech.initialize();
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(onResult: (result) {
+        searchVideos(result.recognizedWords);
+      });
+    } else {
+      print('Speech recognition not available');
+    }
+  }
+
+  void stopListening() {
+    setState(() => _isListening = false);
+    _speech.stop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Décryptages', style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: searchVideos,
+                    decoration: InputDecoration(
+                      labelText: 'Rechercher',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(_isListening ? Icons.mic_off : Icons.mic, color: Colors.blue),
+                  onPressed: _isListening ? stopListening : startListening,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredVideos.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  leading: Image.network(
+                    filteredVideos[index]['thumbnail']!,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(Icons.error, color: Colors.red);
+                    },
+                  ),
+                  title: Text(filteredVideos[index]['title']!),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoPlayerPage(videoPath: filteredVideos[index]['video_path']!),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class VideoPlayerPage extends StatefulWidget {
+  final String videoPath;
+  VideoPlayerPage({required this.videoPath});
+
+  @override
+  _VideoPlayerPageState createState() => _VideoPlayerPageState();
+}
+
+class _VideoPlayerPageState extends State<VideoPlayerPage> {
+  late VideoPlayerController _controller;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.videoPath)
+      ..initialize().then((_) => setState(() {})).catchError((error) {
+        setState(() {
+          _hasError = true;
+        });
+        print('Erreur de chargement de la vidéo : $error');
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Décryptages')),
+      body: _hasError
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, color: Colors.red, size: 50),
+                  Text('Erreur de chargement de la vidéo', style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            )
+          : Center(
+              child: _controller.value.isInitialized
+                  ? AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller))
+                  : CircularProgressIndicator(),
+            ),
+      floatingActionButton: _hasError
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                setState(() {
+                  _controller.value.isPlaying ? _controller.pause() : _controller.play();
+                });
+              },
+              child: Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+            ),
+    );
+  }
+}
+
