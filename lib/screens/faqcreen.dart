@@ -38,59 +38,57 @@ class _FAQScreenState extends State<FAQScreen> {
   }
 
   Future<void> _loadFAQData() async {
-    final response = await Supabase.instance.client
-        .from('faq')
-        .select();
+    try {
+      final List<Map<String, dynamic>> response = await Supabase.instance.client
+          .from('faq')
+          .select();
 
-    if (response.error == null) {
-      final List data = response.data;
       setState(() {
         _faqData.clear();
-        for (var item in data) {
-          _faqData[item['question']] = List<String>.from(item['answer']);
+        for (var item in response) {
+          _faqData[item['question']] = List<String>.from(item['answer'] ?? []);
         }
       });
-    } else {
-      print('Erreur: ${response.error!.message}');
+    } catch (error) {
+      print('Erreur lors du chargement des données : $error');
     }
   }
 
   Future<void> _addQuestion() async {
     String question = _questionController.text.trim();
     if (question.isNotEmpty) {
-      final response = await Supabase.instance.client
-          .from('faq')
-          .insert([
-            {'question': question, 'answer': []}
-          ])
-          .execute();
+      try {
+        await Supabase.instance.client.from('faq').insert({
+          'question': question,
+          'answer': []
+        });
 
-      if (response.error == null) {
         setState(() {
           _faqData[question] = [];
         });
         _questionController.clear();
+      } catch (error) {
+        print('Erreur lors de l'ajout de la question : $error');
       }
     }
   }
 
   Future<void> _addAnswer(String question, String answer) async {
     if (answer.isNotEmpty) {
-      // Ajoutez la nouvelle réponse à la liste existante des réponses
-      final updatedAnswers = List<String>.from(_faqData[question]!)..add(answer);
-      
-      final response = await Supabase.instance.client
-          .from('faq')
-          .upsert([
-            {'question': question, 'answer': updatedAnswers}
-          ])
-          .execute();
+      final updatedAnswers = List<String>.from(_faqData[question] ?? [])..add(answer);
 
-      if (response.error == null) {
+      try {
+        await Supabase.instance.client.from('faq').upsert({
+          'question': question,
+          'answer': updatedAnswers
+        });
+
         setState(() {
           _faqData[question] = updatedAnswers;
         });
-        _showNotification(question);  // Notification après l'ajout de la réponse
+        _showNotification(question);
+      } catch (error) {
+        print('Erreur lors de l'ajout de la réponse : $error');
       }
     }
   }
