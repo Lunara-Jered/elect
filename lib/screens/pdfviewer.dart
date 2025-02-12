@@ -35,7 +35,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
 
       final response = await Supabase.instance.client
           .from('pdf_files') // Assuming the table name is 'pdf_files'
-          .select('file_url') // Assuming the column name is 'file_url'
+          .select('file_url'); // Assuming the column name is 'file_url'
      
 
       if (response.error == null) {
