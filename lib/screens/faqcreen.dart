@@ -11,84 +11,91 @@ class FAQScreen extends StatefulWidget {
 
 class _FAQScreenState extends State<FAQScreen> {
   final TextEditingController _questionController = TextEditingController();
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final TextEditingController _answerController = TextEditingController();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   final Map<String, List<String>> _faqData = {}; // Stocke les questions et réponses
 
   @override
   void initState() {
     super.initState();
     _initializeNotifications();
-    _loadFAQData(); // Charger les données depuis Supabase
+    _loadFAQData();
   }
 
   void _initializeNotifications() {
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    final InitializationSettings settings = InitializationSettings(android: androidSettings);
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings settings =
+        InitializationSettings(android: androidSettings);
     _notificationsPlugin.initialize(settings);
   }
 
   Future<void> _showNotification(String question) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'faq_channel', 'FAQ Notifications',
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'faq_channel',
+      'FAQ Notifications',
       importance: Importance.high,
       priority: Priority.high,
     );
-    const NotificationDetails details = NotificationDetails(android: androidDetails);
-    await _notificationsPlugin.show(0, 'Nouvelle réponse', 'Une réponse a été ajoutée à "$question"', details);
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+    await _notificationsPlugin.show(
+        0, 'Nouvelle réponse', 'Une réponse a été ajoutée à "$question"', details);
   }
 
   Future<void> _loadFAQData() async {
-    try {
-      final List<Map<String, dynamic>> response = await Supabase.instance.client
-          .from('faq')
-          .select();
+    final response = await Supabase.instance.client.from('faq').select();
 
+    if (response.isNotEmpty) {
       setState(() {
         _faqData.clear();
         for (var item in response) {
-          _faqData[item['question']] = List<String>.from(item['answer'] ?? []);
+          _faqData[item['question']] =
+              (item['answer'] as List<dynamic>).map((e) => e.toString()).toList();
         }
       });
-    } catch (error) {
-      print('Erreur lors du chargement des données : $error');
+    } else {
+      print('Erreur lors du chargement des FAQ');
     }
   }
 
   Future<void> _addQuestion() async {
     String question = _questionController.text.trim();
-    if (question.isNotEmpty) {
-      try {
-        await Supabase.instance.client.from('faq').insert({
-          'question': question,
-          'answer': []
-        });
+    if (question.isNotEmpty && !_faqData.containsKey(question)) {
+      final response = await Supabase.instance.client.from('faq').insert([
+        {'question': question, 'answer': []}
+      ]);
 
+      if (!response.error) {
         setState(() {
           _faqData[question] = [];
         });
         _questionController.clear();
-      } catch (error) {
-        print("Erreur lors de l'ajout de la question : $error");
+      } else {
+        print("Erreur lors de l'ajout de la question");
       }
     }
   }
 
-  Future<void> _addAnswer(String question, String answer) async {
+  Future<void> _addAnswer(String question) async {
+    String answer = _answerController.text.trim();
     if (answer.isNotEmpty) {
-      final updatedAnswers = List<String>.from(_faqData[question] ?? [])..add(answer);
+      final updatedAnswers = [..._faqData[question]!, answer];
 
-      try {
-        await Supabase.instance.client.from('faq').upsert({
-          'question': question,
-          'answer': updatedAnswers
-        });
+      final response = await Supabase.instance.client.from('faq').update({
+        'answer': updatedAnswers
+      }).eq('question', question);
 
+      if (!response.error) {
         setState(() {
           _faqData[question] = updatedAnswers;
         });
+        _answerController.clear();
         _showNotification(question);
-      } catch (error) {
-        print("Erreur lors de l'ajout de la réponse : $error");
+      } else {
+        print("Erreur lors de l'ajout de la réponse");
       }
     }
   }
@@ -97,7 +104,8 @@ class _FAQScreenState extends State<FAQScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("FAQ", style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text("FAQ",
+            style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
       ),
       body: Column(
@@ -111,8 +119,10 @@ class _FAQScreenState extends State<FAQScreen> {
                     controller: _questionController,
                     decoration: InputDecoration(
                       hintText: "Posez votre question...",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 10),
                     ),
                   ),
                 ),
@@ -129,13 +139,17 @@ class _FAQScreenState extends State<FAQScreen> {
               itemBuilder: (context, index) {
                 String question = _faqData.keys.elementAt(index);
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
                   child: ExpansionTile(
-                    title: Text("❓ $question", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text("❓ $question",
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold)),
                     children: [
                       ..._faqData[question]!.map((answer) => ListTile(
                             title: Text("💬 $answer"),
-                            leading: const Icon(Icons.comment, color: Colors.blue),
+                            leading:
+                                const Icon(Icons.comment, color: Colors.blue),
                           )),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -143,18 +157,18 @@ class _FAQScreenState extends State<FAQScreen> {
                           children: [
                             Expanded(
                               child: TextField(
+                                controller: _answerController,
                                 decoration: InputDecoration(
                                   hintText: "Votre réponse...",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
-                                onSubmitted: (value) => _addAnswer(question, value),
                               ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.send, color: Colors.green),
                               onPressed: () {
-                                _addAnswer(question, _questionController.text);
-                                _questionController.clear();
+                                _addAnswer(question);
                               },
                             ),
                           ],
