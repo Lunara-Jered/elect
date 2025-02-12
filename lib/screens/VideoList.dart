@@ -2,19 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-class VideoListPage extends StatefulWidget {
-  @override
-  _VideoListPageState createState() => _VideoListPageState();
-}
-
 class _VideoListPageState extends State<VideoListPage> {
-  final List<Map<String, String>> videos = [
-    {'title': 'Vidéo 1', 'videoPath': 'assets/video.mp4', 'thumbnail': 'assets/images/elect.jpeg'},
-    {'title': 'Vidéo 2', 'videoPath': 'assets/vid/video.mp4', 'thumbnail': 'assets/images/elect.png'},
-    {'title': 'Vidéo 3', 'videoPath': 'assets/vid/video1.mp4', 'thumbnail': 'assets/icon.png'},
-    {'title': 'Vidéo 4', 'videoPath': 'assets/vid/vid.mp4', 'thumbnail': 'assets/Brice.png'},
-  ];
-
+  List<Map<String, String>> videos = [];
   List<Map<String, String>> filteredVideos = [];
   stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
@@ -23,13 +12,32 @@ class _VideoListPageState extends State<VideoListPage> {
   @override
   void initState() {
     super.initState();
-    filteredVideos = videos;
+    fetchVideos(); // Charge les vidéos depuis Supabase
+  }
+
+  // Fonction pour récupérer les vidéos depuis Supabase
+  Future<void> fetchVideos() async {
+    final response = await Supabase.instance.client
+        .from('videos')
+        .select()
+        .execute();
+
+    if (response.error == null) {
+      setState(() {
+        videos = List<Map<String, String>>.from(response.data);
+        filteredVideos = videos;
+      });
+    } else {
+      print('Erreur de récupération des vidéos: ${response.error!.message}');
+    }
   }
 
   void searchVideos(String query) {
     setState(() {
       _searchText = query;
-      filteredVideos = videos.where((video) => video['title']!.toLowerCase().contains(query.toLowerCase())).toList();
+      filteredVideos = videos
+          .where((video) => video['title']!.toLowerCase().contains(query.toLowerCase()))
+          .toList();
     });
   }
 
@@ -80,7 +88,7 @@ class _VideoListPageState extends State<VideoListPage> {
               itemCount: filteredVideos.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  leading: Image.asset(
+                  leading: Image.network(
                     filteredVideos[index]['thumbnail']!,
                     width: 50,
                     height: 50,
@@ -94,7 +102,7 @@ class _VideoListPageState extends State<VideoListPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VideoPlayerPage(videoPath: filteredVideos[index]['videoPath']!),
+                        builder: (context) => VideoPlayerPage(videoPath: filteredVideos[index]['video_path']!),
                       ),
                     );
                   },
@@ -123,8 +131,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.videoPath)
+   _controller = VideoPlayerController.network(widget.videoPath)
       ..initialize().then((_) => setState(() {})).catchError((error) => setState(() => _hasError = true));
+
   }
 
   @override
