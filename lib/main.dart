@@ -104,57 +104,74 @@ class BottomNavBar extends StatelessWidget {
 }
 
 // 📌 Section des Stories avec Vidéos
-class StorySection extends StatelessWidget {
+class StorySection extends StatefulWidget {
   const StorySection({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    List<Map<String, dynamic>> stories = [
-      {"image": "assets/brice.png", "name": "Joseph Lapensée ESINGONE","image": "assets/Brice.png", "video": "assets/video1.mp4"},
-      {"image": "assets/murielle.png", "name": "Steeve ILAHOU", "video": "assets/video4.mp4"},
-      {"image": "assets/seraphin.png", "name": "GNINGA CHANNING", "video": "assets/vid.mp4"},
-    ];
+  _StorySectionState createState() => _StorySectionState();
+}
 
+class _StorySectionState extends State<StorySection> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  List<Map<String, dynamic>> stories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchStories();
+  }
+
+  Future<void> fetchStories() async {
+    final response = await supabase.from('stories').select();
+    setState(() {
+      stories = List<Map<String, dynamic>>.from(response);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
-      height: 100, // Réduction de la taille des stories
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: stories.length,
-        itemBuilder: (context, index) {
-          var story = stories[index];
-          return GestureDetector(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (_) => StoryPopup(videoPath: story['video']),
-              );
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 30, // Réduction de la taille des avatars
-                  backgroundImage: AssetImage(story['image']),
-                ),
-                const SizedBox(height: 5), // Espacement
-                Text(
-                  story['name'],
-                  style: const TextStyle(fontSize: 10),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+      height: 100,
+      child: stories.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: stories.length,
+              itemBuilder: (context, index) {
+                var story = stories[index];
+                return GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => StoryPopup(videoUrl: story['videoUrl']),
+                    );
+                  },
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundImage: NetworkImage(story['imageUrl']),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        story['name'],
+                        style: const TextStyle(fontSize: 10),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }
 
+
 // 📌 Popup Video Story
 class StoryPopup extends StatefulWidget {
-  final String videoPath;
-  const StoryPopup({super.key, required this.videoPath});
+  final String videoUrl;
+  const StoryPopup({super.key, required this.videoUrl});
 
   @override
   _StoryPopupState createState() => _StoryPopupState();
@@ -166,7 +183,7 @@ class _StoryPopupState extends State<StoryPopup> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.videoPath)
+    _controller = VideoPlayerController.network(widget.videoUrl)
       ..initialize().then((_) {
         setState(() {});
         _controller.play();
