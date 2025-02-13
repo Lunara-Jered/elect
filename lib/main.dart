@@ -132,7 +132,7 @@ class _StorySectionState extends State<StorySection> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 100,
+      height: 50,
       child: stories.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
