@@ -114,7 +114,7 @@ class ImageItem extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => PDFViewScreen(pdfPath: pdfPath, title: "Document PDF"),
+                builder: (context) => PDFViewScreen(pdfPath: pdfPath, title: "Actualités Politiques"),
               ),
             );
           } else if (type == 'video') {
@@ -228,7 +228,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Lecture Vidéo")),
+      appBar: AppBar(title: const Text("Actualités Politiques")),
       body: Center(
         child: _controller.value.isInitialized
             ? AspectRatio(
