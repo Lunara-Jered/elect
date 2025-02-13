@@ -43,8 +43,8 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     FeedScreen(),
     VideoListPage(),
-    const FAQPage(),
-    const PDFViewerSection(),
+    FAQPage(),
+    PDFViewerSection(),
   ];
 
   void _onItemTapped(int index) {
