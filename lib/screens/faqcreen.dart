@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 
 class FAQScreen extends StatefulWidget {
   const FAQScreen({super.key});
@@ -14,9 +12,8 @@ class FAQScreen extends StatefulWidget {
 class _FAQScreenState extends State<FAQScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   final TextEditingController _questionController = TextEditingController();
-  final TextEditingController _answerController = TextEditingController();
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  
+
   @override
   void initState() {
     super.initState();
@@ -26,7 +23,7 @@ class _FAQScreenState extends State<FAQScreen> {
 
   /// 📌 Initialiser les notifications locales
   void _initNotifications() {
-    const AndroidInitializationSettings initializationSettingsAndroid = 
+    const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -59,15 +56,6 @@ class _FAQScreenState extends State<FAQScreen> {
       await supabase.from('faq').insert({'question': question, 'answer': null});
       _questionController.clear();
       setState(() {}); // Rafraîchir l'affichage
-    }
-  }
-
-  /// 📌 Ajouter une réponse dans la base de données
-  Future<void> _addAnswer(int id) async {
-    String answer = _answerController.text.trim();
-    if (answer.isNotEmpty) {
-      await supabase.from('faq').update({'answer': answer}).match({'id': id});
-      _answerController.clear();
     }
   }
 
@@ -142,28 +130,6 @@ class _FAQScreenState extends State<FAQScreen> {
                               title: Text("💬 ${faq['answer']}"),
                               leading: const Icon(Icons.comment, color: Colors.blue),
                             ),
-
-                          // 📌 Champ pour répondre
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _answerController,
-                                    decoration: InputDecoration(
-                                      hintText: "Votre réponse...",
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.send, color: Colors.green),
-                                  onPressed: () => _addAnswer(faq['id']),
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     );
@@ -177,4 +143,3 @@ class _FAQScreenState extends State<FAQScreen> {
     );
   }
 }
-
