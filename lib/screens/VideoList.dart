@@ -3,16 +3,19 @@ import 'package:video_player/video_player.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+
 class VideoListPage extends StatefulWidget {
   @override
   _VideoListPageState createState() => _VideoListPageState();
 }
+
 class _VideoListPageState extends State<VideoListPage> {
   List<Map<String, String>> videos = [];
   List<Map<String, String>> filteredVideos = [];
   stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   String _searchText = "";
+  bool _isSearchVisible = false; // Gère la visibilité de la search bar
 
   @override
   void initState() {
@@ -21,27 +24,26 @@ class _VideoListPageState extends State<VideoListPage> {
   }
 
   // Fonction pour récupérer les vidéos depuis Supabase
-Future<void> fetchVideos() async {
-  try {
-    final List<dynamic> response = await Supabase.instance.client
-        .from('videos')
-        .select(); // Pas besoin de `.execute()`
+  Future<void> fetchVideos() async {
+    try {
+      final List<dynamic> response = await Supabase.instance.client
+          .from('videos')
+          .select(); // Pas besoin de `.execute()`
 
-    setState(() {
-      // Vérifie que chaque élément est bien une Map<String, dynamic>
-      videos = response.map((video) => {
-            'title': video['title'] as String? ?? '',
-            'thumbnail': video['thumbnail'] as String? ?? '',
-            'video_path': video['video_path'] as String? ?? '',
-          }).toList();
+      setState(() {
+        // Vérifie que chaque élément est bien une Map<String, dynamic>
+        videos = response.map((video) => {
+              'title': video['title'] as String? ?? '',
+              'thumbnail': video['thumbnail'] as String? ?? '',
+              'video_path': video['video_path'] as String? ?? '',
+            }).toList();
 
-      filteredVideos = videos;
-    });
-  } catch (e) {
-    print('Erreur de récupération des vidéos: $e');
+        filteredVideos = videos;
+      });
+    } catch (e) {
+      print('Erreur de récupération des vidéos: $e');
+    }
   }
-}
-
 
   void searchVideos(String query) {
     setState(() {
@@ -73,32 +75,34 @@ Future<void> fetchVideos() async {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Décryptages', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: _isSearchVisible
+            ? TextField(
+                onChanged: searchVideos,
+                decoration: InputDecoration(
+                  labelText: 'Rechercher',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                ),
+              )
+            : Text('Décryptages', style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
+        actions: [
+          IconButton(
+            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                _isSearchVisible = !_isSearchVisible; // Change l'état de la search bar
+                if (!_isSearchVisible) {
+                  _searchText = ""; // Réinitialiser le texte de recherche
+                  filteredVideos = videos; // Réinitialiser la liste filtrée
+                }
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    onChanged: searchVideos,
-                    decoration: InputDecoration(
-                      labelText: 'Rechercher',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(_isListening ? Icons.mic_off : Icons.mic, color: Colors.blue),
-                  onPressed: _isListening ? stopListening : startListening,
-                ),
-              ],
-            ),
-          ),
           Expanded(
             child: ListView.builder(
               itemCount: filteredVideos.length,
@@ -194,3 +198,4 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     );
   }
 }
+
