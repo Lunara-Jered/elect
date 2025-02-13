@@ -170,7 +170,7 @@ class _StorySectionState extends State<StorySection> {
       );
     },
   ),
-)
+);
 
   }
 }
