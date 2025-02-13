@@ -48,13 +48,16 @@ dependencies:
   postgrest: ^2.4.1
   video_player_android: ^2.7.17
   dio: ^5.8.0+1
+  flutter_native_splash: ^2.4.4
+  
+flutter_native_splash:
+  color: "#ffffff"  # Couleur de fond
+  image: "assets/vid.png"  # Image de splash screen
+  android: true
   
 flutter_launcher_icons:
   android: true
-
-  image_path: "assets/icon.png"  # Chemin de ton icône
-  adaptive_icon_foreground: "assets/icon.png"
-  adaptive_icon_background: "assets/icon.png"
+  image_path: "assets/icon.png"  # Chemin de ton icôn
 
 dev_dependencies:
   flutter_test:
