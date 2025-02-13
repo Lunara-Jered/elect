@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:video_player/video_player.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:dio/dio.dart';
+
 
 class FeedScreen extends StatefulWidget {
   @override
@@ -114,19 +118,53 @@ class ImageItem extends StatelessWidget {
   }
 }
 
-class PDFViewScreen extends StatelessWidget {
+class PDFViewScreen extends StatefulWidget {
   final String pdfPath;
   final String title;
 
   const PDFViewScreen({required this.pdfPath, required this.title});
 
   @override
+  _PDFViewScreenState createState() => _PDFViewScreenState();
+}
+
+class _PDFViewScreenState extends State<PDFViewScreen> {
+  String? localFilePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPDF();
+  }
+
+  Future<void> _loadPDF() async {
+    if (widget.pdfPath.startsWith("http")) {
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final filePath = "${tempDir.path}/document.pdf";
+        await Dio().download(widget.pdfPath, filePath);
+        setState(() {
+          localFilePath = filePath;
+        });
+      } catch (e) {
+        print("Erreur de téléchargement du PDF : $e");
+      }
+    } else {
+      setState(() {
+        localFilePath = widget.pdfPath;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: PDFView(
-        filePath: pdfPath,
-      ),
+      appBar: AppBar(title: Text(widget.title)),
+      body: localFilePath == null
+          ? const Center(child: CircularProgressIndicator())
+          : PDFView(
+              filePath: localFilePath!,
+            ),
     );
   }
 }
