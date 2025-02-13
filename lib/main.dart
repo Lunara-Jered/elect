@@ -171,9 +171,9 @@ class _StorySectionState extends State<StorySection> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
+      padding: const EdgeInsets.only(top: 10.0),
       child: SizedBox(
-        height: 110,
+        height: 90,
         child: stories.isEmpty
             ? const Center(child: CircularProgressIndicator()) // Afficher un loader si aucune story
             : PageView.builder(
