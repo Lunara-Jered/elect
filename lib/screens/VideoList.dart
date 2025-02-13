@@ -3,7 +3,6 @@ import 'package:video_player/video_player.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 class VideoListPage extends StatefulWidget {
   @override
   _VideoListPageState createState() => _VideoListPageState();
@@ -12,10 +11,10 @@ class VideoListPage extends StatefulWidget {
 class _VideoListPageState extends State<VideoListPage> {
   List<Map<String, String>> videos = [];
   List<Map<String, String>> filteredVideos = [];
-  stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isSearching = false;
   bool _isListening = false;
-  String _searchText = "";
-  bool _isSearchVisible = false; // Gère la visibilité de la search bar
+  final TextEditingController _searchController = TextEditingController();
+  final stt.SpeechToText _speech = stt.SpeechToText();
 
   @override
   void initState() {
@@ -23,21 +22,18 @@ class _VideoListPageState extends State<VideoListPage> {
     fetchVideos(); // Charge les vidéos depuis Supabase
   }
 
-  // Fonction pour récupérer les vidéos depuis Supabase
   Future<void> fetchVideos() async {
     try {
       final List<dynamic> response = await Supabase.instance.client
           .from('videos')
-          .select(); // Pas besoin de `.execute()`
+          .select();
 
       setState(() {
-        // Vérifie que chaque élément est bien une Map<String, dynamic>
         videos = response.map((video) => {
               'title': video['title'] as String? ?? '',
               'thumbnail': video['thumbnail'] as String? ?? '',
               'video_path': video['video_path'] as String? ?? '',
             }).toList();
-
         filteredVideos = videos;
       });
     } catch (e) {
@@ -45,28 +41,31 @@ class _VideoListPageState extends State<VideoListPage> {
     }
   }
 
-  void searchVideos(String query) {
+  void _filterVideos(String query) {
     setState(() {
-      _searchText = query;
-      filteredVideos = videos
-          .where((video) => video['title']!.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      filteredVideos = query.isEmpty
+          ? videos
+          : videos
+              .where((video) =>
+                  video['title']!.toLowerCase().contains(query.toLowerCase()))
+              .toList();
     });
   }
 
-  void startListening() async {
+  Future<void> _startListening() async {
     bool available = await _speech.initialize();
     if (available) {
       setState(() => _isListening = true);
       _speech.listen(onResult: (result) {
-        searchVideos(result.recognizedWords);
+        setState(() {
+          _searchController.text = result.recognizedWords;
+          _filterVideos(_searchController.text);
+        });
       });
-    } else {
-      print('Speech recognition not available');
     }
   }
 
-  void stopListening() {
+  void _stopListening() {
     setState(() => _isListening = false);
     _speech.stop();
   }
@@ -75,27 +74,33 @@ class _VideoListPageState extends State<VideoListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: _isSearchVisible
+        title: _isSearching
             ? TextField(
-                onChanged: searchVideos,
+                controller: _searchController,
+                onChanged: _filterVideos,
                 decoration: InputDecoration(
                   labelText: 'Rechercher',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                    onPressed: _isListening ? _stopListening : _startListening,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
                 ),
               )
-            : Text('Décryptages', style: TextStyle(color: Colors.white, fontSize: 18)),
+            : const Text('Décryptages',
+                style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
         actions: [
           IconButton(
-            icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
-                _isSearchVisible = !_isSearchVisible; // Change l'état de la search bar
-                if (!_isSearchVisible) {
-                  _searchText = ""; // Réinitialiser le texte de recherche
-                  filteredVideos = videos; // Réinitialiser la liste filtrée
-                }
+                _isSearching = !_isSearching;
+                _searchController.clear();
+                _filterVideos(""); // Réinitialise la recherche
               });
             },
           ),
@@ -114,7 +119,7 @@ class _VideoListPageState extends State<VideoListPage> {
                     height: 50,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.error, color: Colors.red);
+                      return const Icon(Icons.error, color: Colors.red);
                     },
                   ),
                   title: Text(filteredVideos[index]['title']!),
@@ -122,7 +127,9 @@ class _VideoListPageState extends State<VideoListPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VideoPlayerPage(videoPath: filteredVideos[index]['video_path']!),
+                        builder: (context) => VideoPlayerPage(
+                          videoPath: filteredVideos[index]['video_path']!,
+                        ),
                       ),
                     );
                   },
@@ -169,33 +176,39 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Décryptages')),
+      appBar: AppBar(title: const Text('Décryptages')),
       body: _hasError
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+                children: const [
                   Icon(Icons.error, color: Colors.red, size: 50),
-                  Text('Erreur de chargement de la vidéo', style: TextStyle(fontSize: 18)),
+                  Text('Erreur de chargement de la vidéo',
+                      style: TextStyle(fontSize: 18)),
                 ],
               ),
             )
           : Center(
               child: _controller.value.isInitialized
-                  ? AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller))
-                  : CircularProgressIndicator(),
+                  ? AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    )
+                  : const CircularProgressIndicator(),
             ),
       floatingActionButton: _hasError
           ? null
           : FloatingActionButton(
               onPressed: () {
                 setState(() {
-                  _controller.value.isPlaying ? _controller.pause() : _controller.play();
+                  _controller.value.isPlaying
+                      ? _controller.pause()
+                      : _controller.play();
                 });
               },
-              child: Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+              child: Icon(
+                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
             ),
     );
   }
 }
-
