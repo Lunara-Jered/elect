@@ -106,6 +106,10 @@ class BottomNavBar extends StatelessWidget {
 }
 
 // 📌 Section des Stories avec Vidéos 
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class StorySection extends StatefulWidget {
   const StorySection({super.key});
 
@@ -125,28 +129,39 @@ class _StorySectionState extends State<StorySection> {
     super.initState();
     _pageController = PageController(viewportFraction: 0.25);
     fetchStories();
-    startAutoScroll();
   }
 
   Future<void> fetchStories() async {
     final response = await supabase.from('stories').select();
-    setState(() {
-      stories = List<Map<String, dynamic>>.from(response);
-    });
+    print("Stories récupérées: $response"); // Debugging pour voir les données
+
+    if (response != null && response.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          stories = List<Map<String, dynamic>>.from(response);
+        });
+        startAutoScroll(); // Lancer le défilement SEULEMENT si des stories existent
+      }
+    }
   }
 
   void startAutoScroll() {
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    if (stories.isEmpty) return; // Ne pas démarrer si pas de stories
+
+    _timer?.cancel(); // Annuler le timer précédent avant d’en créer un nouveau
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) { // Augmenter la durée
       if (_currentIndex < stories.length - 1) {
         _currentIndex++;
       } else {
         _currentIndex = 0;
       }
-      _pageController.animateToPage(
-        _currentIndex,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
+      if (mounted) {
+        _pageController.animateToPage(
+          _currentIndex,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
@@ -163,44 +178,48 @@ class _StorySectionState extends State<StorySection> {
       padding: const EdgeInsets.only(top: 16.0),
       child: SizedBox(
         height: 110,
-        child: PageView.builder(
-          controller: _pageController,
-          scrollDirection: Axis.horizontal,
-          itemCount: stories.length,
-          itemBuilder: (context, index) {
-            var story = stories[index];
-            List<String> mediaUrls = List<String>.from(story['mediaUrls']);
+        child: stories.isEmpty
+            ? const Center(child: CircularProgressIndicator()) // Afficher un loader si aucune story
+            : PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.horizontal,
+                itemCount: stories.length,
+                itemBuilder: (context, index) {
+                  var story = stories[index];
+                  List<String> mediaUrls = List<String>.from(story['mediaUrls'] ?? []);
 
-            return GestureDetector(
-              onTap: () => showDialog(
-                context: context,
-                builder: (_) => StoryPopup(mediaUrls: mediaUrls),
-              ),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(
-                      radius: 35,
-                      backgroundImage: NetworkImage(mediaUrls.first), // Affiche la première image/vidéo comme vignette
+                  if (mediaUrls.isEmpty) return const SizedBox(); // Éviter les erreurs
+
+                  return GestureDetector(
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (_) => StoryPopup(mediaUrls: mediaUrls),
                     ),
-                    const SizedBox(height: 5),
-                    SizedBox(
-                      width: 60,
-                      child: Text(
-                        story['name'] ?? '',
-                        style: const TextStyle(fontSize: 10),
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 35,
+                            backgroundImage: NetworkImage(mediaUrls.first), // Affiche la première image/vidéo comme vignette
+                          ),
+                          const SizedBox(height: 5),
+                          SizedBox(
+                            width: 60,
+                            child: Text(
+                              story['name'] ?? '',
+                              style: const TextStyle(fontSize: 10),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -227,8 +246,10 @@ class _StoryPopupState extends State<StoryPopup> {
   void initState() {
     super.initState();
     _pageController = PageController();
-    _initializeMedia(widget.mediaUrls[_currentIndex]);
-    startAutoScroll();
+    if (widget.mediaUrls.isNotEmpty) {
+      _initializeMedia(widget.mediaUrls[_currentIndex]);
+      startAutoScroll();
+    }
   }
 
   void _initializeMedia(String url) {
@@ -236,24 +257,31 @@ class _StoryPopupState extends State<StoryPopup> {
       _videoController?.dispose();
       _videoController = VideoPlayerController.network(url)
         ..initialize().then((_) {
-          setState(() {});
-          _videoController!.play();
+          if (mounted) {
+            setState(() {});
+            _videoController!.play();
+          }
         });
     }
   }
 
   void startAutoScroll() {
+    if (widget.mediaUrls.length <= 1) return; // Pas besoin de défiler s'il y a une seule image/vidéo
+
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_currentIndex < widget.mediaUrls.length - 1) {
         _currentIndex++;
       } else {
         _currentIndex = 0;
       }
-      _pageController.animateToPage(
-        _currentIndex,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
+      if (mounted) {
+        _pageController.animateToPage(
+          _currentIndex,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
+      }
       _initializeMedia(widget.mediaUrls[_currentIndex]);
     });
   }
@@ -296,3 +324,4 @@ class _StoryPopupState extends State<StoryPopup> {
     );
   }
 }
+
