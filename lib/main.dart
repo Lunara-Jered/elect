@@ -105,6 +105,9 @@ class BottomNavBar extends StatelessWidget {
   }
 }
  
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StorySection extends StatefulWidget {
   const StorySection({super.key});
@@ -140,17 +143,18 @@ class _StorySectionState extends State<StorySection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100, // Ajuste la hauteur de la section des stories
+      height: 100, // Hauteur de la section des stories
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: stories.length,
         itemBuilder: (context, index) {
           var story = stories[index];
-          bool isVideo = story['mediaUrl'] != null &&
-              (story['mediaUrl'] as String).endsWith('.mp4');
+          String imageUrl = story['imageUrl'] ?? '';
+          String mediaUrl = story['mediaUrl'] ?? '';
+          bool isVideo = mediaUrl.endsWith('.mp4');
 
           return GestureDetector(
-            onTap: () => _showStoryPopup(story['mediaUrl'] ?? '', isVideo),
+            onTap: () => _showStoryPopup(mediaUrl, isVideo),
             child: Container(
               width: 95, // Largeur fixe pour chaque story
               child: Column(
@@ -158,10 +162,7 @@ class _StorySectionState extends State<StorySection> {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundImage: isVideo
-                        ? const NetworkImage(
-                            'https://via.placeholder.com/60x60.png?text=Vidéo')
-                        : NetworkImage(story['mediaUrl'] ?? ''),
+                    backgroundImage: NetworkImage(imageUrl),
                   ),
                   const SizedBox(height: 5),
                   SizedBox(
@@ -183,7 +184,7 @@ class _StorySectionState extends State<StorySection> {
   }
 }
 
-// 📌 Popup Image/Video Story
+// 📌 Popup qui affiche une image ou une vidéo
 class StoryPopup extends StatefulWidget {
   final String mediaUrl;
   final bool isVideo;
@@ -219,12 +220,12 @@ class _StoryPopupState extends State<StoryPopup> {
   Widget build(BuildContext context) {
     return AlertDialog(
       content: widget.isVideo
-          ? _controller != null && _controller!.value.isInitialized
+          ? (_controller != null && _controller!.value.isInitialized
               ? AspectRatio(
                   aspectRatio: _controller!.value.aspectRatio,
                   child: VideoPlayer(_controller!),
                 )
-              : const CircularProgressIndicator()
+              : const CircularProgressIndicator())
           : Image.network(widget.mediaUrl, fit: BoxFit.cover),
     );
   }
