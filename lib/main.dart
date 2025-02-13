@@ -43,7 +43,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     FeedScreen(),
     VideoListPage(),
-    const FAQScreen(),
+    const FAQPage(),
     const PDFViewerSection(),
   ];
 
