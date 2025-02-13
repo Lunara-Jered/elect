@@ -104,8 +104,7 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 }
-
-// 📌 Section des Stories avec Vidéos 
+ 
 
 class StorySection extends StatefulWidget {
   const StorySection({super.key});
@@ -131,6 +130,13 @@ class _StorySectionState extends State<StorySection> {
     });
   }
 
+  void _showStoryPopup(String mediaUrl, bool isVideo) {
+    showDialog(
+      context: context,
+      builder: (context) => StoryPopup(mediaUrl: mediaUrl, isVideo: isVideo),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -140,26 +146,35 @@ class _StorySectionState extends State<StorySection> {
         itemCount: stories.length,
         itemBuilder: (context, index) {
           var story = stories[index];
-          return Container(
-            width: 95, // Largeur fixe pour chaque story
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(story['imageUrl'] ?? ''),
-                ),
-                const SizedBox(height: 5),
-                SizedBox(
-                  width: 60,
-                  child: Text(
-                    story['name'] ?? '',
-                    style: const TextStyle(fontSize: 10),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
+          bool isVideo = story['mediaUrl'] != null &&
+              (story['mediaUrl'] as String).endsWith('.mp4');
+
+          return GestureDetector(
+            onTap: () => _showStoryPopup(story['mediaUrl'] ?? '', isVideo),
+            child: Container(
+              width: 95, // Largeur fixe pour chaque story
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundImage: isVideo
+                        ? const NetworkImage(
+                            'https://via.placeholder.com/60x60.png?text=Vidéo')
+                        : NetworkImage(story['mediaUrl'] ?? ''),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 5),
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      story['name'] ?? '',
+                      style: const TextStyle(fontSize: 10),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -168,46 +183,49 @@ class _StorySectionState extends State<StorySection> {
   }
 }
 
-
-
-
-// 📌 Popup Video Story
+// 📌 Popup Image/Video Story
 class StoryPopup extends StatefulWidget {
-  final String videoUrl;
-  const StoryPopup({super.key, required this.videoUrl});
+  final String mediaUrl;
+  final bool isVideo;
+
+  const StoryPopup({super.key, required this.mediaUrl, required this.isVideo});
 
   @override
   _StoryPopupState createState() => _StoryPopupState();
 }
 
 class _StoryPopupState extends State<StoryPopup> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.videoUrl)
-      ..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
+    if (widget.isVideo) {
+      _controller = VideoPlayerController.network(widget.mediaUrl)
+        ..initialize().then((_) {
+          setState(() {});
+          _controller!.play();
+        });
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      content: _controller.value.isInitialized
-          ? AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
-            )
-          : const CircularProgressIndicator(),
+      content: widget.isVideo
+          ? _controller != null && _controller!.value.isInitialized
+              ? AspectRatio(
+                  aspectRatio: _controller!.value.aspectRatio,
+                  child: VideoPlayer(_controller!),
+                )
+              : const CircularProgressIndicator()
+          : Image.network(widget.mediaUrl, fit: BoxFit.cover),
     );
   }
 }
