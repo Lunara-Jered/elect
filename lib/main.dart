@@ -132,31 +132,41 @@ class _StorySectionState extends State<StorySection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-  width: 80, // Largeur fixe pour chaque story
-  child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      CircleAvatar(
-        radius: 30,
-        backgroundImage: NetworkImage(story['imageUrl']),
+      height: 100, // Ajuste la hauteur de la section des stories
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: stories.length,
+        itemBuilder: (context, index) {
+          var story = stories[index];
+          return Container(
+            width: 80, // Largeur fixe pour chaque story
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: NetworkImage(story['imageUrl'] ?? ''),
+                ),
+                const SizedBox(height: 5),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    story['name'] ?? '',
+                    style: const TextStyle(fontSize: 10),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-      const SizedBox(height: 5),
-      SizedBox(
-        width: 60,
-        child: Text(
-          story['name'],
-          style: const TextStyle(fontSize: 10),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    ],
-  ),
-);
-
-
+    );
   }
 }
+
+
 
 
 // 📌 Popup Video Story
