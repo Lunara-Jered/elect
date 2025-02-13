@@ -193,6 +193,8 @@ class StoryPopup extends StatefulWidget {
 
 class _StoryPopupState extends State<StoryPopup> {
   VideoPlayerController? _controller;
+  bool _isLoading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -200,9 +202,22 @@ class _StoryPopupState extends State<StoryPopup> {
     if (widget.isVideo) {
       _controller = VideoPlayerController.network(widget.mediaUrl)
         ..initialize().then((_) {
-          setState(() {});
+          setState(() {
+            _isLoading = false;
+            _hasError = false;
+          });
           _controller!.play();
+        }).catchError((error) {
+          setState(() {
+            _isLoading = false;
+            _hasError = true;
+          });
         });
+    } else {
+      setState(() {
+        _isLoading = false;
+        _hasError = widget.mediaUrl.isEmpty;
+      });
     }
   }
 
@@ -215,14 +230,26 @@ class _StoryPopupState extends State<StoryPopup> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      content: widget.isVideo
-          ? (_controller != null && _controller!.value.isInitialized
-              ? AspectRatio(
-                  aspectRatio: _controller!.value.aspectRatio,
-                  child: VideoPlayer(_controller!),
-                )
-              : const CircularProgressIndicator())
-          : Image.network(widget.mediaUrl, fit: BoxFit.cover),
+      content: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _hasError
+              ? const Text("Impossible de charger le média.")
+              : widget.isVideo
+                  ? AspectRatio(
+                      aspectRatio: _controller!.value.aspectRatio,
+                      child: VideoPlayer(_controller!),
+                    )
+                  : Image.network(
+                      widget.mediaUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text("Impossible de charger l'image.");
+                      },
+                    ),
     );
   }
 }
