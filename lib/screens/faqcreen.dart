@@ -46,20 +46,34 @@ class _FAQScreenState extends State<FAQScreen> {
   }
 
   Future<void> _loadFAQData() async {
-    final response = await Supabase.instance.client.from('faq').select();
+  final response = await Supabase.instance.client.from('faq').select();
 
-    if (response.isNotEmpty) {
-      setState(() {
-        _faqData.clear();
-        for (var item in response) {
+  if (response.isNotEmpty) {
+    setState(() {
+      _faqData.clear();
+      for (var item in response) {
+        // Vérifier si 'answer' est bien une liste
+        if (item['answer'] is List) {
           _faqData[item['question']] =
-              (item['answer'] as List<dynamic>).map((e) => e.toString()).toList();
+              (item['answer'] as List).map((e) => e.toString()).toList();
+        } else if (item['answer'] is String) {
+          // Si c'est une chaîne, essayer de parser en JSON
+          try {
+            _faqData[item['question']] =
+                (jsonDecode(item['answer']) as List).map((e) => e.toString()).toList();
+          } catch (e) {
+            _faqData[item['question']] = []; // Valeur par défaut si erreur
+          }
+        } else {
+          _faqData[item['question']] = [];
         }
-      });
-    } else {
-      print('Erreur lors du chargement des FAQ');
-    }
+      }
+    });
+  } else {
+    print('Erreur lors du chargement des FAQ');
   }
+}
+
 
   Future<void> _addQuestion() async {
     String question = _questionController.text.trim();
