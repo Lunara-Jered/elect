@@ -106,10 +106,6 @@ class BottomNavBar extends StatelessWidget {
 }
 
 // 📌 Section des Stories avec Vidéos 
-import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 class StorySection extends StatefulWidget {
   const StorySection({super.key});
 
