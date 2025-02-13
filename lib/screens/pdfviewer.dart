@@ -4,6 +4,10 @@ import 'package:path/path.dart' as path;
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+
 
 class PDFViewerSection extends StatefulWidget {
   const PDFViewerSection({super.key});
@@ -199,33 +203,68 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
 }
 
 // 📌 Écran pour afficher un PDF
-class PDFViewScreen extends StatelessWidget {
+
+class PDFViewScreen extends StatefulWidget {
   final String pdfUrl;
   final String pdfName;
 
   const PDFViewScreen({super.key, required this.pdfUrl, required this.pdfName});
 
   @override
+  _PDFViewScreenState createState() => _PDFViewScreenState();
+}
+
+class _PDFViewScreenState extends State<PDFViewScreen> {
+  String? localPath;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _downloadAndSavePDF();
+  }
+
+  Future<void> _downloadAndSavePDF() async {
+    try {
+      final response = await http.get(Uri.parse(widget.pdfUrl));
+
+      if (response.statusCode == 200) {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File("${dir.path}/${widget.pdfName}.pdf");
+        await file.writeAsBytes(response.bodyBytes);
+
+        setState(() {
+          localPath = file.path;
+          isLoading = false;
+        });
+      } else {
+        print("Erreur lors du téléchargement: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Erreur: $e");
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(pdfName, style: const TextStyle(fontSize: 18)),
+        title: Text(widget.pdfName, style: const TextStyle(fontSize: 18)),
         backgroundColor: Colors.blue,
       ),
-      body: PDFView(
-        filePath: pdfUrl,
-        enableSwipe: true,
-        swipeHorizontal: false,
-        autoSpacing: true,
-        pageSnap: true,
-        pageFling: true,
-        onError: (error) {
-          print(error.toString());
-        },
-        onPageError: (page, error) {
-          print('Erreur sur la page $page: $error');
-        },
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : PDFView(
+              filePath: localPath,
+              enableSwipe: true,
+              swipeHorizontal: false,
+              autoSpacing: true,
+              pageSnap: true,
+              pageFling: true,
+              onError: (error) => print("Erreur: $error"),
+              onPageError: (page, error) =>
+                  print('Erreur sur la page $page: $error'),
+            ),
     );
   }
 }
