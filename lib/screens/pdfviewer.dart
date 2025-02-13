@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
-import 'package:elect241/screens/components/pdfview.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,8 +13,8 @@ class PDFViewerSection extends StatefulWidget {
 }
 
 class _PDFViewerSectionState extends State<PDFViewerSection> {
-  List<String> _pdfFiles = [];
-  List<String> _filteredFiles = [];
+  List<Map<String, String>> _pdfFiles = [];
+  List<Map<String, String>> _filteredFiles = [];
   bool _isSearching = false;
   bool _isLoading = true;
   bool _isListening = false;
@@ -25,34 +25,39 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
-    _fetchPDFFilesFromDatabase(); // Get PDF files from Supabase
+    _fetchPDFFilesFromDatabase(); // Charger les fichiers PDF depuis Supabase
   }
 
   // 📌 Charge les fichiers PDF depuis Supabase
- Future<void> _fetchPDFFilesFromDatabase() async {
-  try {
-    setState(() => _isLoading = true);
+  Future<void> _fetchPDFFilesFromDatabase() async {
+    try {
+      setState(() => _isLoading = true);
 
-    final List<Map<String, dynamic>> response = await Supabase.instance.client
-        .from('pdf_files') // Nom correct de la table
-        .select('file_url'); // Nom correct de la colonne
+      final List<Map<String, dynamic>> response = await Supabase.instance.client
+          .from('pdf_files') // Nom de la table
+          .select('name, file_url'); // Sélectionne le nom et l'URL du fichier
 
-    // ✅ Vérifier si des données existent
-    if (response.isNotEmpty) {
-      final List<String> fetchedFiles = response.map((item) => item['file_url'] as String).toList();
-      setState(() {
-        _pdfFiles = fetchedFiles;
-        _filteredFiles = _pdfFiles;
-      });
-    } else {
-      print('Aucun fichier trouvé dans la base de données.');
+      if (response.isNotEmpty) {
+        final List<Map<String, String>> fetchedFiles = response
+            .map((item) => {
+                  'name': item['name'] as String,
+                  'url': item['file_url'] as String
+                })
+            .toList();
+
+        setState(() {
+          _pdfFiles = fetchedFiles;
+          _filteredFiles = _pdfFiles;
+        });
+      } else {
+        print('Aucun fichier trouvé dans la base de données.');
+      }
+    } catch (e) {
+      print("Erreur lors de la récupération des PDFs: $e");
+    } finally {
+      setState(() => _isLoading = false);
     }
-  } catch (e) {
-    print("Erreur lors de la récupération des PDFs: $e");
-  } finally {
-    setState(() => _isLoading = false);
   }
-}
 
   // 📌 Filtre les fichiers en fonction de la recherche
   void _filterFiles(String query) {
@@ -61,7 +66,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
           ? _pdfFiles
           : _pdfFiles
               .where((file) =>
-                  path.basename(file).toLowerCase().contains(query.toLowerCase()))
+                  file['name']!.toLowerCase().contains(query.toLowerCase()))
               .toList();
     });
   }
@@ -116,7 +121,6 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
       ),
       body: Column(
         children: [
-          // Champ de recherche en haut de la liste
           if (_isSearching)
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -137,7 +141,6 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
               ),
             ),
 
-          // Liste des fichiers PDF
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -152,8 +155,8 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
                     : ListView.builder(
                         itemCount: _filteredFiles.length,
                         itemBuilder: (context, index) {
-                          String filePath = _filteredFiles[index];
-                          String fileName = path.basename(filePath);
+                          String fileName = _filteredFiles[index]['name']!;
+                          String fileUrl = _filteredFiles[index]['url']!;
                           return Card(
                             color: Colors.white,
                             margin: const EdgeInsets.symmetric(
@@ -174,7 +177,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => PDFViewScreen(
-                                        pdfPath: filePath, pdfName: fileName),
+                                        pdfUrl: fileUrl, pdfName: fileName),
                                   ),
                                 );
                               },
@@ -190,6 +193,38 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         child: const Icon(Icons.refresh),
+      ),
+    );
+  }
+}
+
+// 📌 Écran pour afficher un PDF
+class PDFViewScreen extends StatelessWidget {
+  final String pdfUrl;
+  final String pdfName;
+
+  const PDFViewScreen({super.key, required this.pdfUrl, required this.pdfName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(pdfName, style: const TextStyle(fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ),
+      body: PDFView(
+        filePath: pdfUrl,
+        enableSwipe: true,
+        swipeHorizontal: false,
+        autoSpacing: true,
+        pageSnap: true,
+        pageFling: true,
+        onError: (error) {
+          print(error.toString());
+        },
+        onPageError: (page, error) {
+          print('Erreur sur la page $page: $error');
+        },
       ),
     );
   }
