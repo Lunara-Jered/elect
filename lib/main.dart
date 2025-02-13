@@ -131,46 +131,29 @@ class _StorySectionState extends State<StorySection> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-  height: 80, // Ajuste selon la taille des stories
-  child: ListView.builder(
-    scrollDirection: Axis.horizontal, // Assure un affichage en ligne
-    itemCount: stories.length,
-    itemBuilder: (context, index) {
-      var story = stories[index];
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5), // Ajoute un espacement
-        child: GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (_) => StoryPopup(videoUrl: story['videoUrl']),
-            );
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundImage: NetworkImage(story['imageUrl']),
-              ),
-              const SizedBox(height: 5),
-              SizedBox(
-                width: 60, // Fixe une largeur pour éviter les coupures
-                child: Text(
-                  story['name'],
-                  style: const TextStyle(fontSize: 10),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis, // Coupe si le texte est trop long
-                ),
-              ),
-            ],
-          ),
+    return Container(
+  width: 80, // Largeur fixe pour chaque story
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      CircleAvatar(
+        radius: 30,
+        backgroundImage: NetworkImage(story['imageUrl']),
+      ),
+      const SizedBox(height: 5),
+      SizedBox(
+        width: 60,
+        child: Text(
+          story['name'],
+          style: const TextStyle(fontSize: 10),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
         ),
-      );
-    },
+      ),
+    ],
   ),
 );
+
 
   }
 }
