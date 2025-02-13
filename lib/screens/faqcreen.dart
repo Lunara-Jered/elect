@@ -3,145 +3,178 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class FAQPage extends StatefulWidget {
+
+class FAQScreen extends StatefulWidget {
+  const FAQScreen({super.key});
+
   @override
-  _FAQPageState createState() => _FAQPageState();
+  _FAQScreenState createState() => _FAQScreenState();
 }
 
-class _FAQPageState extends State<FAQPage> {
+class _FAQScreenState extends State<FAQScreen> {
+  final SupabaseClient supabase = Supabase.instance.client;
   final TextEditingController _questionController = TextEditingController();
   final TextEditingController _answerController = TextEditingController();
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  final SupabaseClient _supabase = Supabase.instance.client;
-  Map<String, List<String>> _faqData = {};
-
+  
   @override
   void initState() {
     super.initState();
-    _initializeNotifications();
-    _loadFAQData();
-    _listenForUpdates();
+    _initNotifications();
+    _listenForAnswers();
   }
 
-  void _initializeNotifications() {
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings settings = InitializationSettings(android: androidSettings);
-    _notificationsPlugin.initialize(settings);
-  }
+  /// 📌 Initialiser les notifications locales
+  void _initNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid = 
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  void _showNotification(String question) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'faq_channel', 'FAQ Notifications',
-      importance: Importance.high, priority: Priority.high,
+    final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
     );
-    const NotificationDetails details = NotificationDetails(android: androidDetails);
-    await _notificationsPlugin.show(0, 'Nouvelle réponse ajoutée', 'À la question : $question', details);
+
+    _notificationsPlugin.initialize(initializationSettings);
   }
 
-  void _listenForUpdates() {
-    _supabase.from('faq').stream(primaryKey: ['id']).listen((data) {
-      _loadFAQData();
+  /// 📌 Afficher une notification
+  Future<void> _showNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'faq_channel',
+      'FAQ Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _notificationsPlugin.show(0, title, body, platformChannelSpecifics);
+  }
+
+  /// 📌 Ajouter une question dans la base de données
+  Future<void> _addQuestion() async {
+    String question = _questionController.text.trim();
+    if (question.isNotEmpty) {
+      await supabase.from('faq').insert({'question': question, 'answer': null});
+      _questionController.clear();
+      setState(() {}); // Rafraîchir l'affichage
+    }
+  }
+
+  /// 📌 Ajouter une réponse dans la base de données
+  Future<void> _addAnswer(int id) async {
+    String answer = _answerController.text.trim();
+    if (answer.isNotEmpty) {
+      await supabase.from('faq').update({'answer': answer}).match({'id': id});
+      _answerController.clear();
+    }
+  }
+
+  /// 📌 Écouter les nouvelles réponses et envoyer une notification
+  void _listenForAnswers() {
+    supabase.from('faq').stream(primaryKey: ['id']).listen((data) {
+      for (var row in data) {
+        if (row['answer'] != null) {
+          _showNotification("Nouvelle réponse !", row['answer']);
+        }
+      }
     });
   }
 
-  Future<void> _loadFAQData() async {
-    final response = await _supabase.from('faq').select();
-    if (response.isNotEmpty) {
-      setState(() {
-        _faqData.clear();
-        for (var item in response) {
-          try {
-            _faqData[item['question']] = (jsonDecode(item['answer']) as List).map((e) => e.toString()).toList();
-          } catch (e) {
-            _faqData[item['question']] = [];
-          }
-        }
-      });
-    }
-  }
-
-  Future<void> _addQuestion() async {
-    String question = _questionController.text.trim();
-    if (question.isNotEmpty && !_faqData.containsKey(question)) {
-      final response = await _supabase.from('faq').insert([
-        {'question': question, 'answer': jsonEncode([])}
-      ]);
-      if (response != null) {
-        _questionController.clear();
-      }
-    }
-  }
-
-  Future<void> _addAnswer(String question) async {
-    String answer = _answerController.text.trim();
-    if (answer.isNotEmpty) {
-      final response = await _supabase.from('faq').select().eq('question', question).single();
-      if (response != null) {
-        List<dynamic> existingAnswers = jsonDecode(response['answer']);
-        existingAnswers.add(answer);
-
-        final updateResponse = await _supabase.from('faq').update({
-          'answer': jsonEncode(existingAnswers)
-        }).eq('question', question);
-
-        if (updateResponse != null) {
-          _answerController.clear();
-          _showNotification(question);
-        }
-      }
-    }
+  /// 📌 Récupérer les questions depuis Supabase
+  Future<List<Map<String, dynamic>>> _fetchFaq() async {
+    return await supabase.from('faq').select();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('FAQ App')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _questionController,
-              decoration: InputDecoration(labelText: 'Posez une question'),
-            ),
-            SizedBox(height: 10),
-            ElevatedButton(onPressed: _addQuestion, child: Text('Ajouter Question')),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _faqData.keys.length,
-                itemBuilder: (context, index) {
-                  String question = _faqData.keys.elementAt(index);
-                  return Card(
-                    child: ExpansionTile(
-                      title: Text(question, style: TextStyle(fontWeight: FontWeight.bold)),
-                      children: [
-                        for (String answer in _faqData[question]!)
-                          ListTile(title: Text(answer)),
-                        Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Column(
-                            children: [
-                              TextField(
-                                controller: _answerController,
-                                decoration: InputDecoration(labelText: 'Ajouter une réponse'),
-                              ),
-                              SizedBox(height: 5),
-                              ElevatedButton(
-                                onPressed: () => _addAnswer(question),
-                                child: Text('Ajouter Réponse'),
-                              )
-                            ],
-                          ),
-                        )
-                      ],
+      appBar: AppBar(
+        title: const Text("FAQ"),
+        backgroundColor: Colors.blue,
+      ),
+      body: Column(
+        children: [
+          // 📌 Champ pour poser une question
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _questionController,
+                    decoration: InputDecoration(
+                      hintText: "Posez votre question...",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                  );
-                },
-              ),
-            )
-          ],
-        ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue),
+                  onPressed: _addQuestion,
+                ),
+              ],
+            ),
+          ),
+
+          // 📌 Liste des questions et réponses
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchFaq(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final faqList = snapshot.data!;
+                return ListView.builder(
+                  itemCount: faqList.length,
+                  itemBuilder: (context, index) {
+                    final faq = faqList[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      child: ExpansionTile(
+                        title: Text("❓ ${faq['question']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        children: [
+                          if (faq['answer'] != null)
+                            ListTile(
+                              title: Text("💬 ${faq['answer']}"),
+                              leading: const Icon(Icons.comment, color: Colors.blue),
+                            ),
+
+                          // 📌 Champ pour répondre
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _answerController,
+                                    decoration: InputDecoration(
+                                      hintText: "Votre réponse...",
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.send, color: Colors.green),
+                                  onPressed: () => _addAnswer(faq['id']),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
