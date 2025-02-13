@@ -169,57 +169,45 @@ class _StorySectionState extends State<StorySection> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10.0),
-      child: SizedBox(
-        height: 90,
-        child: stories.isEmpty
-            ? const Center(child: CircularProgressIndicator()) // Afficher un loader si aucune story
-            : PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.horizontal,
-                itemCount: stories.length,
-                itemBuilder: (context, index) {
-                  var story = stories[index];
-                  List<String> mediaUrls = List<String>.from(story['mediaUrls'] ?? []);
-
-                  if (mediaUrls.isEmpty) return const SizedBox(); // Éviter les erreurs
-
-                  return GestureDetector(
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (_) => StoryPopup(mediaUrls: mediaUrls),
-                    ),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 5),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircleAvatar(
-                            radius: 35,
-                            backgroundImage: NetworkImage(mediaUrls.first), // Affiche la première image/vidéo comme vignette
-                          ),
-                          const SizedBox(height: 5),
-                          SizedBox(
-                            width: 60,
-                            child: Text(
-                              story['name'] ?? '',
-                              style: const TextStyle(fontSize: 10),
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+Widget build(BuildContext context) {
+  return Padding(
+    padding: const EdgeInsets.only(top: 16.0), // Ajoute un espace en haut
+    child: SizedBox(
+      height: 100, // Ajuste la hauteur de la section des stories
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: stories.length,
+        itemBuilder: (context, index) {
+          var story = stories[index];
+          return Container(
+            width: 80, // Largeur fixe pour chaque story
+            margin: const EdgeInsets.symmetric(horizontal: 5), // Espacement entre stories
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: NetworkImage(story['imageUrl'] ?? ''),
+                ),
+                const SizedBox(height: 5),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    story['name'] ?? '',
+                    style: const TextStyle(fontSize: 10),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
 }
+
 
 
 
