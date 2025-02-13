@@ -7,6 +7,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 
 
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:video_player/video_player.dart';
+
 class FeedScreen extends StatefulWidget {
   @override
   _FeedScreenState createState() => _FeedScreenState();
@@ -14,6 +19,7 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   List<Map<String, dynamic>> feedItems = [];
+  bool isLoading = false; // Indicateur de chargement
 
   @override
   void initState() {
@@ -22,6 +28,10 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Future<void> _fetchFeedItems() async {
+    setState(() {
+      isLoading = true; // Active le chargement
+    });
+
     try {
       final response = await Supabase.instance.client.from('feed_items').select();
       if (response.isNotEmpty) {
@@ -36,6 +46,13 @@ class _FeedScreenState extends State<FeedScreen> {
       }
     } catch (e) {
       print("Erreur de récupération des données : $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur lors du chargement des données")),
+      );
+    } finally {
+      setState(() {
+        isLoading = false; // Désactive le chargement
+      });
     }
   }
 
@@ -46,23 +63,35 @@ class _FeedScreenState extends State<FeedScreen> {
         title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
       ),
-      body: feedItems.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: ListView.builder(
-                itemCount: feedItems.length,
-                itemBuilder: (context, index) {
-                  final item = feedItems[index];
-                  return ImageItem(
-                    imagePath: item["image"]!,
-                    pdfPath: item["pdf"]!,
-                    videoPath: item["video"]!,
-                    type: item["type"]!,
-                  );
-                },
-              ),
-            ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator()) // Affiche un loader si en cours de chargement
+          : feedItems.isEmpty
+              ? const Center(child: Text("Aucun contenu disponible"))
+              : Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: ListView.builder(
+                    itemCount: feedItems.length,
+                    itemBuilder: (context, index) {
+                      final item = feedItems[index];
+                      return ImageItem(
+                        imagePath: item["image"]!,
+                        pdfPath: item["pdf"]!,
+                        videoPath: item["video"]!,
+                        type: item["type"]!,
+                      );
+                    },
+                  ),
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await _fetchFeedItems();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Fil d'actualités mis à jour")),
+          );
+        },
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.refresh, color: Colors.white),
+      ),
     );
   }
 }
