@@ -116,100 +116,72 @@ class StorySection extends StatefulWidget {
 class _StorySectionState extends State<StorySection> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> stories = [];
-  late PageController _pageController;
-  int _currentIndex = 0;
-  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.25);
     fetchStories();
   }
 
   Future<void> fetchStories() async {
     final response = await supabase.from('stories').select();
-    print("Stories récupérées: $response"); // Debugging pour voir les données
-
-    if (response != null && response.isNotEmpty) {
-      if (mounted) {
-        setState(() {
-          stories = List<Map<String, dynamic>>.from(response);
-        });
-        startAutoScroll(); // Lancer le défilement SEULEMENT si des stories existent
-      }
-    }
-  }
-
-  void startAutoScroll() {
-    if (stories.isEmpty) return; // Ne pas démarrer si pas de stories
-
-    _timer?.cancel(); // Annuler le timer précédent avant d’en créer un nouveau
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) { // Augmenter la durée
-      if (_currentIndex < stories.length - 1) {
-        _currentIndex++;
-      } else {
-        _currentIndex = 0;
-      }
-      if (mounted) {
-        _pageController.animateToPage(
-          _currentIndex,
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeInOut,
-        );
-      }
+    setState(() {
+      stories = List<Map<String, dynamic>>.from(response);
     });
   }
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: SizedBox(
+        height: 100,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: stories.length,
+          itemBuilder: (context, index) {
+            var story = stories[index];
+            List<String> mediaUrls = List<String>.from(story['mediaUrls'] ?? []);
 
-  @override
-Widget build(BuildContext context) {
-  return Padding(
-    padding: const EdgeInsets.only(top: 16.0), // Ajoute un espace en haut
-    child: SizedBox(
-      height: 100, // Ajuste la hauteur de la section des stories
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: stories.length,
-        itemBuilder: (context, index) {
-          var story = stories[index];
-          return Container(
-            width: 80, // Largeur fixe pour chaque story
-            margin: const EdgeInsets.symmetric(horizontal: 5), // Espacement entre stories
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(story['imageUrl'] ?? ''),
+            return GestureDetector(
+              onTap: () {
+                if (mediaUrls.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => StoryPopup(mediaUrls: mediaUrls),
+                  );
+                }
+              },
+              child: Container(
+                width: 80,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage: NetworkImage(story['imageUrl'] ?? ''),
+                    ),
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        story['name'] ?? '',
+                        style: const TextStyle(fontSize: 10),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 5),
-                SizedBox(
-                  width: 60,
-                  child: Text(
-                    story['name'] ?? '',
-                    style: const TextStyle(fontSize: 10),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
-
-
-
 
 // 📌 Popup Video Story
 class StoryPopup extends StatefulWidget {
@@ -224,21 +196,28 @@ class _StoryPopupState extends State<StoryPopup> {
   late PageController _pageController;
   int _currentIndex = 0;
   VideoPlayerController? _videoController;
-  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    
     if (widget.mediaUrls.isNotEmpty) {
       _initializeMedia(widget.mediaUrls[_currentIndex]);
-      startAutoScroll();
     }
   }
 
+  bool _isVideo(String url) {
+    return url.toLowerCase().endsWith('.mp4');
+  }
+
   void _initializeMedia(String url) {
-    if (url.endsWith('.mp4')) {
+    if (_isVideo(url)) {
+      // Libérer l'ancien contrôleur avant de créer un nouveau
+      _videoController?.pause();
       _videoController?.dispose();
+      _videoController = null;
+
       _videoController = VideoPlayerController.network(url)
         ..initialize().then((_) {
           if (mounted) {
@@ -249,30 +228,9 @@ class _StoryPopupState extends State<StoryPopup> {
     }
   }
 
-  void startAutoScroll() {
-    if (widget.mediaUrls.length <= 1) return; // Pas besoin de défiler s'il y a une seule image/vidéo
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (_currentIndex < widget.mediaUrls.length - 1) {
-        _currentIndex++;
-      } else {
-        _currentIndex = 0;
-      }
-      if (mounted) {
-        _pageController.animateToPage(
-          _currentIndex,
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeInOut,
-        );
-      }
-      _initializeMedia(widget.mediaUrls[_currentIndex]);
-    });
-  }
-
   @override
   void dispose() {
-    _timer?.cancel();
+    _videoController?.pause();
     _videoController?.dispose();
     _pageController.dispose();
     super.dispose();
@@ -294,7 +252,7 @@ class _StoryPopupState extends State<StoryPopup> {
           },
           itemBuilder: (context, index) {
             String url = widget.mediaUrls[index];
-            return url.endsWith('.mp4')
+            return _isVideo(url)
                 ? (_videoController != null && _videoController!.value.isInitialized
                     ? AspectRatio(
                         aspectRatio: _videoController!.value.aspectRatio,
@@ -308,4 +266,3 @@ class _StoryPopupState extends State<StoryPopup> {
     );
   }
 }
-
