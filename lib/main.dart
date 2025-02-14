@@ -104,6 +104,9 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 }
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StorySection extends StatefulWidget {
   const StorySection({super.key});
@@ -130,6 +133,13 @@ class _StorySectionState extends State<StorySection> {
   }
 
   void _showStoryPopup(String mediaUrl, bool isVideo) {
+    if (mediaUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Aucun média disponible pour cette story.")),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => StoryPopup(mediaUrl: mediaUrl, isVideo: isVideo),
@@ -139,7 +149,7 @@ class _StorySectionState extends State<StorySection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100, // Hauteur de la section des stories
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: stories.length,
@@ -152,7 +162,7 @@ class _StorySectionState extends State<StorySection> {
           return GestureDetector(
             onTap: () => _showStoryPopup(mediaUrl, isVideo),
             child: Container(
-              width: 95, // Largeur fixe pour chaque story
+              width: 95,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -180,7 +190,7 @@ class _StorySectionState extends State<StorySection> {
   }
 }
 
-// 📌 Popup qui affiche une image ou une vidéo
+// 📌 Popup amélioré avec lecture vidéo fonctionnelle
 class StoryPopup extends StatefulWidget {
   final String mediaUrl;
   final bool isVideo;
@@ -230,14 +240,50 @@ class _StoryPopupState extends State<StoryPopup> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      contentPadding: EdgeInsets.zero,
       content: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _hasError
-              ? const Text("Impossible de charger le média.")
+              ? const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text("Impossible de charger le média."),
+                )
               : widget.isVideo
-                  ? AspectRatio(
-                      aspectRatio: _controller!.value.aspectRatio,
-                      child: VideoPlayer(_controller!),
+                  ? Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        AspectRatio(
+                          aspectRatio: _controller!.value.aspectRatio,
+                          child: VideoPlayer(_controller!),
+                        ),
+                        VideoProgressIndicator(_controller!, allowScrubbing: true),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 10,
+                          child: FloatingActionButton(
+                            mini: true,
+                            backgroundColor: Colors.white,
+                            onPressed: () {
+                              setState(() {
+                                _controller!.value.isPlaying
+                                    ? _controller!.pause()
+                                    : _controller!.play();
+                              });
+                            },
+                            child: Icon(
+                              _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
                     )
                   : Image.network(
                       widget.mediaUrl,
@@ -247,7 +293,10 @@ class _StoryPopupState extends State<StoryPopup> {
                         return const Center(child: CircularProgressIndicator());
                       },
                       errorBuilder: (context, error, stackTrace) {
-                        return const Text("Impossible de charger l'image.");
+                        return const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text("Impossible de charger l'image."),
+                        );
                       },
                     ),
     );
