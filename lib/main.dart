@@ -125,28 +125,22 @@ class _StorySectionState extends State<StorySection> {
 
   Future<void> fetchStories() async {
     final response = await supabase.from('stories').select();
-    List<Map<String, dynamic>> allStories = List<Map<String, dynamic>>.from(response);
-
-    // 🔹 Ne garder que les vidéos
     setState(() {
-      stories = allStories.where((story) {
-        String mediaUrl = story['mediaUrl'] ?? '';
-        return mediaUrl.endsWith('.mp4'); // Filtrer uniquement les vidéos
-      }).toList();
+      stories = List<Map<String, dynamic>>.from(response);
     });
   }
 
-  void _showStoryPopup(String mediaUrl) {
+  void _showStoryPopup(String mediaUrl, bool isVideo) {
     if (mediaUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aucune vidéo disponible pour cette story.")),
+        const SnackBar(content: Text("Aucun média disponible pour cette story.")),
       );
       return;
     }
 
     showDialog(
       context: context,
-      builder: (context) => StoryPopup(mediaUrl: mediaUrl),
+      builder: (context) => StoryPopup(mediaUrl: mediaUrl, isVideo: isVideo),
     );
   }
 
@@ -159,10 +153,13 @@ class _StorySectionState extends State<StorySection> {
         itemCount: stories.length,
         itemBuilder: (context, index) {
           var story = stories[index];
+          String imageUrl = story['imageUrl'] ?? '';
           String mediaUrl = story['mediaUrl'] ?? '';
+          String name = story['name'] ?? 'Sans nom';
+          bool isVideo = mediaUrl.endsWith('.mp4');
 
           return GestureDetector(
-            onTap: () => _showStoryPopup(mediaUrl),
+            onTap: () => _showStoryPopup(mediaUrl, isVideo),
             child: Container(
               width: 95,
               child: Column(
@@ -170,14 +167,16 @@ class _StorySectionState extends State<StorySection> {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: Colors.blue,
-                    child: const Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
+                    backgroundImage: NetworkImage(imageUrl),
+                    child: isVideo
+                        ? const Icon(Icons.play_circle_fill, color: Colors.white, size: 30)
+                        : null,
                   ),
                   const SizedBox(height: 5),
                   SizedBox(
                     width: 60,
                     child: Text(
-                      story['name'] ?? '',
+                      name,
                       style: const TextStyle(fontSize: 10),
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
@@ -193,46 +192,54 @@ class _StorySectionState extends State<StorySection> {
   }
 }
 
-// 📌 Popup amélioré pour LIRE UNIQUEMENT LES VIDÉOS
+// 📌 Popup qui affiche les images et vidéos
 class StoryPopup extends StatefulWidget {
   final String mediaUrl;
+  final bool isVideo;
 
-  const StoryPopup({super.key, required this.mediaUrl});
+  const StoryPopup({super.key, required this.mediaUrl, required this.isVideo});
 
   @override
   _StoryPopupState createState() => _StoryPopupState();
 }
 
 class _StoryPopupState extends State<StoryPopup> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   bool _isLoading = true;
   bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
-    print("📹 Chargement de la vidéo : ${widget.mediaUrl}");
+    print("📹 Chargement du média : ${widget.mediaUrl}");
 
-    _controller = VideoPlayerController.network(widget.mediaUrl)
-      ..initialize().then((_) {
-        print("✅ Vidéo chargée avec succès");
-        setState(() {
-          _isLoading = false;
-          _hasError = false;
+    if (widget.isVideo) {
+      _controller = VideoPlayerController.network(widget.mediaUrl)
+        ..initialize().then((_) {
+          print("✅ Vidéo chargée avec succès");
+          setState(() {
+            _isLoading = false;
+            _hasError = false;
+          });
+          _controller!.play();
+        }).catchError((error) {
+          print("❌ Erreur de chargement vidéo : $error");
+          setState(() {
+            _isLoading = false;
+            _hasError = true;
+          });
         });
-        _controller.play();
-      }).catchError((error) {
-        print("❌ Erreur de chargement vidéo : $error");
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-        });
+    } else {
+      setState(() {
+        _isLoading = false;
+        _hasError = widget.mediaUrl.isEmpty;
       });
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -245,44 +252,60 @@ class _StoryPopupState extends State<StoryPopup> {
           : _hasError
               ? const Padding(
                   padding: EdgeInsets.all(20),
-                  child: Text("Impossible de charger la vidéo."),
+                  child: Text("Impossible de charger le média."),
                 )
-              : Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    ),
-                    VideoProgressIndicator(_controller, allowScrubbing: true),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 10,
-                      child: FloatingActionButton(
-                        mini: true,
-                        backgroundColor: Colors.white,
-                        onPressed: () {
-                          setState(() {
-                            _controller.value.isPlaying
-                                ? _controller.pause()
-                                : _controller.play();
-                          });
-                        },
-                        child: Icon(
-                          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.black,
+              : widget.isVideo
+                  ? Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        AspectRatio(
+                          aspectRatio: _controller!.value.aspectRatio,
+                          child: VideoPlayer(_controller!),
                         ),
-                      ),
+                        VideoProgressIndicator(_controller!, allowScrubbing: true),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 10,
+                          child: FloatingActionButton(
+                            mini: true,
+                            backgroundColor: Colors.white,
+                            onPressed: () {
+                              setState(() {
+                                _controller!.value.isPlaying
+                                    ? _controller!.pause()
+                                    : _controller!.play();
+                              });
+                            },
+                            child: Icon(
+                              _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Image.network(
+                      widget.mediaUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        print("❌ Erreur de chargement de l'image : $error");
+                        return const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text("Impossible de charger l'image."),
+                        );
+                      },
                     ),
-                  ],
-                ),
     );
   }
 }
