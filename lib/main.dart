@@ -159,7 +159,7 @@ class _StorySectionState extends State<StorySection> {
           bool isVideo = mediaUrl.endsWith('.mp4');
 
           return GestureDetector(
-            onTap: () => _showStoryPopup(mediaUrl, isVideo),
+            onTap: () => _showStoryPopup(mediaUrl),
             child: Container(
               width: 95,
               child: Column(
