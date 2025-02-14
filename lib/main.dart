@@ -147,7 +147,7 @@ class _StorySectionState extends State<StorySection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100,
+      height: 80,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: stories.length,
