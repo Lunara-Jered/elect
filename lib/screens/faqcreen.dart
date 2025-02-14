@@ -79,7 +79,7 @@ class _FAQScreenState extends State<FAQScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("FAQ"),
+        title: const Text("FAQ", style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
       ),
       body: Column(
