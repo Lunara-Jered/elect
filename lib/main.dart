@@ -130,7 +130,7 @@ class _StorySectionState extends State<StorySection> {
     });
   }
 
-  void _showStoryPopup(String mediaUrl, bool isVideo) {
+  void _showStoryPopup(String mediaUrl) {
     if (mediaUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Aucun média disponible pour cette story.")),
@@ -140,7 +140,7 @@ class _StorySectionState extends State<StorySection> {
 
     showDialog(
       context: context,
-      builder: (context) => StoryPopup(mediaUrl: mediaUrl, isVideo: isVideo),
+      builder: (context) => StoryPopup(mediaUrl: mediaUrl),
     );
   }
 
