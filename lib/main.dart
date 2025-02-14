@@ -104,6 +104,10 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 } 
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class StorySection extends StatefulWidget {
   const StorySection({super.key});
 
@@ -206,20 +210,24 @@ class _StoryPopupState extends State<StoryPopup> {
   void initState() {
     super.initState();
     if (widget.isVideo) {
+      print("📹 Chargement de la vidéo : ${widget.mediaUrl}");
       _controller = VideoPlayerController.network(widget.mediaUrl)
         ..initialize().then((_) {
+          print("✅ Vidéo chargée avec succès");
           setState(() {
             _isLoading = false;
             _hasError = false;
           });
           _controller!.play();
         }).catchError((error) {
+          print("❌ Erreur de chargement vidéo : $error");
           setState(() {
             _isLoading = false;
             _hasError = true;
           });
         });
     } else {
+      print("🖼 Chargement de l'image : ${widget.mediaUrl}");
       setState(() {
         _isLoading = false;
         _hasError = widget.mediaUrl.isEmpty;
@@ -289,6 +297,7 @@ class _StoryPopupState extends State<StoryPopup> {
                         return const Center(child: CircularProgressIndicator());
                       },
                       errorBuilder: (context, error, stackTrace) {
+                        print("❌ Erreur de chargement de l'image : $error");
                         return const Padding(
                           padding: EdgeInsets.all(20),
                           child: Text("Impossible de charger l'image."),
@@ -298,3 +307,4 @@ class _StoryPopupState extends State<StoryPopup> {
     );
   }
 }
+
