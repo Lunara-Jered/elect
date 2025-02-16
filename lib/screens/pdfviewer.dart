@@ -10,8 +10,9 @@ import 'package:path_provider/path_provider.dart';
 
 
 class PDFViewerSection extends StatefulWidget {
-  const PDFViewerSection({super.key});
+  final String fileUrl;
 
+  const PDFViewerSection({super.key, required this.fileUrl});
 
 
   @override
