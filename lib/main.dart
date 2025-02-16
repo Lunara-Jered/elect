@@ -135,7 +135,7 @@ class _MainScreenState extends State<MainScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PDFViewerSection(pdfUrl: result['url']),
+            builder: (context) => PDFViewerSection(fileUrl: result['file_url']),
           ),
         );
         break;
