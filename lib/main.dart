@@ -47,10 +47,9 @@ class _MainScreenState extends State<MainScreen> {
     FAQScreen(),
     PDFViewerSection(),
   ];
-  
-  final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> searchResults = [];
+
   final SupabaseClient supabase = Supabase.instance.client;
+  List<Map<String, dynamic>> searchResults = [];
 
   @override
   void initState() {
@@ -71,9 +70,9 @@ class _MainScreenState extends State<MainScreen> {
           .from(table)
           .stream(primaryKey: ['id'])
           .listen((event) {
-            print("🔄 Mise à jour détectée dans $table");
-            setState(() {}); // Rafraîchir l'application
-          });
+        print("🔄 Mise à jour détectée dans $table");
+        setState(() {}); // Rafraîchir l'application
+      });
     }
   }
 
@@ -112,28 +111,20 @@ class _MainScreenState extends State<MainScreen> {
         _showStoryPopup(result['mediaUrl']);
         break;
       case 'video':
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => VideoPlayerPage(videoPath: result['url']),
-        ));
-        break;
-      case 'faq':
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(result['question']),
-            content: Text(result['answer']),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: Text("Fermer"))
-            ],
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoPlayerPage(videoPath: result['url']),
           ),
         );
         break;
+      case 'faq':
       case 'feed_item':
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text("Actualité"),
-            content: Text(result['content']),
+            title: Text(result['type'] == 'faq' ? result['question'] : "Actualité"),
+            content: Text(result['type'] == 'faq' ? result['answer'] : result['content']),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: Text("Fermer"))
             ],
@@ -141,11 +132,28 @@ class _MainScreenState extends State<MainScreen> {
         );
         break;
       case 'pdf':
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => PDFViewerSection(pdfUrl: result['url']),
-        ));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PDFViewerSection(pdfUrl: result['url']),
+          ),
+        );
         break;
     }
+  }
+
+  void _showStoryPopup(String mediaUrl) {
+    if (mediaUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Aucun média disponible pour cette story.")),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => StoryPopup(mediaUrl: mediaUrl), // ✅ Correction ici
+    );
   }
 
   @override
@@ -185,6 +193,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
+
 class DataSearch extends SearchDelegate<String> {
   final Function(String) onSearch;
   final List<Map<String, dynamic>> results;
