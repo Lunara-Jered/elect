@@ -41,6 +41,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+
   final List<Widget> _screens = [
     FeedScreen(),
     VideoListPage(),
@@ -48,112 +49,10 @@ class _MainScreenState extends State<MainScreen> {
     PDFViewerSection(),
   ];
 
-  final SupabaseClient supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> searchResults = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _setupRealtimeListener();
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-  }
-
-  /// 🔄 Rafraîchit automatiquement l'application lorsque la base de données change
-  void _setupRealtimeListener() {
-    for (var table in ['stories', 'videos', 'faq', 'feed_items', 'pdf_files']) {
-      supabase
-          .from(table)
-          .stream(primaryKey: ['id'])
-          .listen((event) {
-        print("🔄 Mise à jour détectée dans $table");
-        setState(() {}); // Rafraîchir l'application
-      });
-    }
-  }
-
-  Future<void> _performSearch(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        searchResults = [];
-      });
-      return;
-    }
-
-    final List<Map<String, dynamic>> results = [];
-
-    // 🔍 Recherche dans les 5 tables
-    final stories = await supabase.from('stories').select().ilike('name', '%$query%');
-    final videos = await supabase.from('videos').select().ilike('title', '%$query%');
-    final faqs = await supabase.from('faq').select().ilike('question', '%$query%');
-    final feedItems = await supabase.from('feed_items').select().ilike('content', '%$query%');
-    final pdfs = await supabase.from('pdf_files').select().ilike('title', '%$query%');
-
-    // Ajout des résultats avec indication du type
-    results.addAll(stories.map((e) => {...e, 'type': 'story'}));
-    results.addAll(videos.map((e) => {...e, 'type': 'video'}));
-    results.addAll(faqs.map((e) => {...e, 'type': 'faq'}));
-    results.addAll(feedItems.map((e) => {...e, 'type': 'feed_item'}));
-    results.addAll(pdfs.map((e) => {...e, 'type': 'pdf'}));
-
-    setState(() {
-      searchResults = results;
-    });
-  }
-
-  void _openResult(Map<String, dynamic> result) {
-    switch (result['type']) {
-      case 'story':
-        _showStoryPopup(result['mediaUrl']);
-        break;
-      case 'video':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VideoPlayerPage(videoPath: result['url']),
-          ),
-        );
-        break;
-      case 'faq':
-      case 'feed_item':
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(result['type'] == 'faq' ? result['question'] : "Actualité"),
-            content: Text(result['type'] == 'faq' ? result['answer'] : result['content']),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: Text("Fermer"))
-            ],
-          ),
-        );
-        break;
-      case 'pdf':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PDFViewSection(),
-          ),
-        );
-        break;
-    }
-  }
-
-  void _showStoryPopup(String mediaUrl) {
-    if (mediaUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aucun média disponible pour cette story.")),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => StoryPopup(mediaUrl: mediaUrl), // ✅ Correction ici
-    );
   }
 
   @override
@@ -163,21 +62,10 @@ class _MainScreenState extends State<MainScreen> {
         elevation: 4,
         backgroundColor: Colors.white,
         title: Image.asset("assets/banner.png", height: 40),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search, color: Colors.black),
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: DataSearch(_performSearch, searchResults, _openResult),
-              );
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [
-          const StorySection(),
+          const StorySection(), // Ajout de la section stories sous l'AppBar
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
@@ -194,56 +82,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-class DataSearch extends SearchDelegate<String> {
-  final Function(String) onSearch;
-  final List<Map<String, dynamic>> results;
-  final Function(Map<String, dynamic>) onResultTap;
 
-  DataSearch(this.onSearch, this.results, this.onResultTap);
-
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: Icon(Icons.clear),
-        onPressed: () => query = "",
-      ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      icon: Icon(Icons.arrow_back),
-      onPressed: () => close(context, ""),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    onSearch(query);
-    return _buildSearchResults();
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return _buildSearchResults();
-  }
-
-  Widget _buildSearchResults() {
-    return ListView.builder(
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        final item = results[index];
-        return ListTile(
-          title: Text(item['name'] ?? item['title'] ?? item['question'] ?? "Résultat"),
-          subtitle: Text(item['type'].toUpperCase()),
-          onTap: () => onResultTap(item),
-        );
-      },
-    );
-  }
-}
 
 
 class BottomNavBar extends StatelessWidget {
