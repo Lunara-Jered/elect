@@ -198,3 +198,106 @@ class ImageItem extends StatelessWidget {
     );
   }
 }
+
+
+class PDFViewScreen extends StatefulWidget {
+  final String pdfPath;
+  final String title;
+
+  const PDFViewScreen({required this.pdfPath, required this.title});
+
+  @override
+  _PDFViewScreenState createState() => _PDFViewScreenState();
+}
+
+class _PDFViewScreenState extends State<PDFViewScreen> {
+  String? localFilePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPDF();
+  }
+
+  Future<void> _loadPDF() async {
+    if (widget.pdfPath.startsWith("http")) {
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final filePath = "${tempDir.path}/document.pdf";
+        await Dio().download(widget.pdfPath, filePath);
+        setState(() {
+          localFilePath = filePath;
+        });
+      } catch (e) {
+        print("Erreur de téléchargement du PDF : $e");
+      }
+    } else {
+      setState(() {
+        localFilePath = widget.pdfPath;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: localFilePath == null
+          ? const Center(child: CircularProgressIndicator())
+          : PDFView(
+              filePath: localFilePath!,
+            ),
+    );
+  }
+}
+
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoPath;
+
+  const VideoPlayerScreen({required this.videoPath});
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.videoPath)
+      ..initialize().then((_) {
+        setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Actualités Politiques")),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+            : const CircularProgressIndicator(),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _controller.value.isPlaying ? _controller.pause() : _controller.play();
+          });
+        },
+        child: Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+      ),
+    );
+  }
+}
