@@ -88,65 +88,77 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
-        backgroundColor: Colors.blue,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    onChanged: _searchItems,
-                    decoration: InputDecoration(
-                      hintText: "Rechercher...",
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-                IconButton(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: _isSearching
+          ? TextField(
+              controller: _searchController,
+              onChanged: _searchItems,
+              decoration: InputDecoration(
+                hintText: "Rechercher...",
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
                   icon: Icon(isListening ? Icons.mic : Icons.mic_none, color: Colors.blue),
-                  onPressed: _startListening,
+                  onPressed: () {
+                    setState(() {
+                      isListening = !isListening;
+                      _isSearching = true; // Active la recherche via le micro
+                    });
+
+                    isListening ? _startListening() : _stopListening();
+                  },
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredItems.isEmpty
-                    ? const Center(child: Text("Aucun contenu trouvé"))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(10.0),
-                        itemCount: filteredItems.length,
-                        itemBuilder: (context, index) {
-                          final item = filteredItems[index];
-                          return ImageItem(
-                            imagePath: item["image"]!,
-                            pdfPath: item["pdf"]!,
-                            videoPath: item["video"]!,
-                            type: item["type"]!,
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _fetchFeedItems,
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.refresh, color: Colors.white),
-      ),
-    );
-  }
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            )
+          : const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
+      backgroundColor: Colors.blue,
+      actions: [
+        IconButton(
+          icon: Icon(_isSearching ? Icons.close : Icons.search),
+          onPressed: () {
+            setState(() {
+              _isSearching = !_isSearching;
+              _searchController.clear();
+              _searchItems(""); // Réinitialise la recherche
+            });
+          },
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filteredItems.isEmpty
+                  ? const Center(child: Text("Aucun contenu trouvé"))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(10.0),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        return ImageItem(
+                          imagePath: item["image"]!,
+                          pdfPath: item["pdf"]!,
+                          videoPath: item["video"]!,
+                          type: item["type"]!,
+                        );
+                      },
+                    ),
+        ),
+      ],
+    ),
+    floatingActionButton: FloatingActionButton(
+      onPressed: _fetchFeedItems,
+      backgroundColor: Colors.blue,
+      child: const Icon(Icons.refresh, color: Colors.white),
+    ),
+  );
 }
+
 
 class ImageItem extends StatelessWidget {
   final String imagePath;
