@@ -70,77 +70,83 @@ class _VideoListPageState extends State<VideoListPage> {
     _speech.stop();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                onChanged: _filterVideos,
-                decoration: InputDecoration(
-                  labelText: 'Rechercher',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                    onPressed: _isListening ? _stopListening : _startListening,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: _isSearching
+          ? TextField(
+              controller: _searchController,
+              onChanged: _filterVideos,
+              decoration: InputDecoration(
+                labelText: 'Rechercher',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                  onPressed: () {
+                    setState(() {
+                      _isListening = !_isListening;
+                      _isSearching = true; // Active la recherche avec le micro
+                    });
+
+                    _isListening ? _startListening() : _stopListening();
+                  },
                 ),
-              )
-            : const Text('Décryptages',
-                style: TextStyle(color: Colors.white, fontSize: 18)),
-        backgroundColor: Colors.blue,
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                _searchController.clear();
-                _filterVideos(""); // Réinitialise la recherche
-              });
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+            )
+          : const Text('Décryptages',
+              style: TextStyle(color: Colors.white, fontSize: 18)),
+      backgroundColor: Colors.blue,
+      actions: [
+        IconButton(
+          icon: Icon(_isSearching ? Icons.close : Icons.search),
+          onPressed: () {
+            setState(() {
+              _isSearching = !_isSearching;
+              _searchController.clear();
+              _filterVideos(""); // Réinitialise la recherche
+            });
+          },
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: filteredVideos.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                leading: Image.network(
+                  filteredVideos[index]['thumbnail']!,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.error, color: Colors.red);
+                  },
+                ),
+                title: Text(filteredVideos[index]['title']!),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VideoPlayerPage(
+                        videoPath: filteredVideos[index]['video_path']!,
+                      ),
+                    ),
+                  );
+                },
+              );
             },
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: filteredVideos.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: Image.network(
-                    filteredVideos[index]['thumbnail']!,
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.error, color: Colors.red);
-                    },
-                  ),
-                  title: Text(filteredVideos[index]['title']!),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => VideoPlayerPage(
-                          videoPath: filteredVideos[index]['video_path']!,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
 
 class VideoPlayerPage extends StatefulWidget {
