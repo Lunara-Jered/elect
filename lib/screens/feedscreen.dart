@@ -16,7 +16,7 @@ class _FeedScreenState extends State<FeedScreen> {
   List<Map<String, dynamic>> feedItems = [];
   List<Map<String, dynamic>> filteredItems = [];
   bool _isSearching = false;
-  bool _isLoading = false;
+  bool _isLoading = true;
   bool _isListening = false;
   String searchQuery = "";
   stt.SpeechToText speech = stt.SpeechToText();
