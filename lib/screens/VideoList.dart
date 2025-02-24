@@ -78,7 +78,7 @@ Widget build(BuildContext context) {
     appBar: AppBar(
         title: Text("Décryptages", style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
-      ), elevation: 0,
+      elevation: 0,
         actions: [
           IconButton(
             onPressed: () {
@@ -91,7 +91,7 @@ Widget build(BuildContext context) {
             icon: Icon(_isSearching ? Icons.cancel : Icons.search),
           ),
         ],
-          
+        ),
    
       body: Column(
         children: [
