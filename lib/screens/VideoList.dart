@@ -12,10 +12,10 @@ class _VideoListPageState extends State<VideoListPage> {
   List<Map<String, String>> videos = [];
   List<Map<String, String>> filteredVideos = [];
   bool _isSearching = false;
+   bool _isLoading = false;
   bool _isListening = false;
   final TextEditingController _searchController = TextEditingController();
   final stt.SpeechToText _speech = stt.SpeechToText();
-  late stt.SpeechToText _speech;
   String searchQuery = "";
   
   @override
@@ -76,7 +76,7 @@ class _VideoListPageState extends State<VideoListPage> {
 Widget build(BuildContext context) {
   return Scaffold(
     appBar: AppBar(
-        title: const Text("Décryptages", style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: Text("Décryptages", style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
       ), elevation: 0,
         actions: [
