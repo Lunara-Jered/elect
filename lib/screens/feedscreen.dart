@@ -90,7 +90,7 @@ class _FeedScreenState extends State<FeedScreen> {
       appBar: AppBar(
         title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
-      ), elevation: 0,
+      ),
         actions: [
           IconButton(
             onPressed: () {
