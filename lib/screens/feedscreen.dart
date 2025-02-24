@@ -88,57 +88,74 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
- @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
-        backgroundColor: Colors.blue,
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text(
+        "Actualités Politiques",
+        style: TextStyle(color: Colors.white, fontSize: 18),
       ),
-      body: Column(
-        children: [
+      backgroundColor: Colors.blue,
+      elevation: 0,
+      actions: [
+        IconButton(
+          onPressed: () {
+            setState(() {
+              _isSearching = !_isSearching;
+              filteredItems = items; // Garde la liste filtrée
+              _searchController.clear();
+            });
+          },
+          icon: Icon(_isSearching ? Icons.cancel : Icons.search),
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        if (_isSearching)
           Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    onChanged: _searchItems,
-                    decoration: InputDecoration(
-                      hintText: "Rechercher...",
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(isListening ? Icons.mic : Icons.mic_none, color: Colors.blue),
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _searchItems,
+              decoration: InputDecoration(
+                labelText: "Rechercher...",
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: Icon(isListening ? Icons.mic : Icons.mic_none),
                   onPressed: _startListening,
                 ),
-              ],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
             ),
           ),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredItems.isEmpty
-                    ? const Center(child: Text("Aucun contenu trouvé"))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(10.0),
-                        itemCount: filteredItems.length,
-                        itemBuilder: (context, index) {
-                          final item = filteredItems[index];
-                          return ImageItem(
-                            imagePath: item["image"]!,
-                            pdfPath: item["pdf"]!,
-                            videoPath: item["video"]!,
-                            type: item["type"]!,
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
+        Expanded(
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filteredItems.isEmpty
+                  ? const Center(child: Text("Aucun contenu trouvé"))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(10.0),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        return ImageItem(
+                          imagePath: item["image"]!,
+                          pdfPath: item["pdf"]!,
+                          videoPath: item["video"]!,
+                          type: item["type"]!,
+                        );
+                      },
+                    ),
+        ),
+      ],
+    ),
+  );
+}
+
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchFeedItems,
         backgroundColor: Colors.blue,
