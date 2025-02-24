@@ -103,7 +103,7 @@ class _FeedScreenState extends State<FeedScreen> {
             icon: Icon(_isSearching ? Icons.cancel : Icons.search),
           ),
         ],
-      ),
+      
       body: Column(
         children: [
            if (_isSearching)
@@ -152,6 +152,7 @@ class _FeedScreenState extends State<FeedScreen> {
         backgroundColor: Colors.blue,
         child: const Icon(Icons.refresh, color: Colors.white),
       ),
+   
     );
   }
 }
