@@ -15,10 +15,13 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   List<Map<String, dynamic>> feedItems = [];
   List<Map<String, dynamic>> filteredItems = [];
-  bool isLoading = false;
+  bool _isSearching = false;
+  bool _isLoading = false;
+  bool _isListening = false;
   String searchQuery = "";
   stt.SpeechToText speech = stt.SpeechToText();
-  bool isListening = false;
+  late stt.SpeechToText _speech;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -63,98 +66,86 @@ class _FeedScreenState extends State<FeedScreen> {
     });
   }
 
-  void _startListening() async {
-    bool available = await speech.initialize(
-      onStatus: (status) {
-        if (status == "notListening") {
-          setState(() => isListening = false);
-        }
-      },
-      onError: (error) {
-        print("Erreur Speech: $error");
-      },
+  Future<void> _startListening() async {
+    bool available = await _speech.initialize(
+      onStatus: (status) => print("Status: $status"),
+      onError: (error) => print("Error: $error"),
     );
 
     if (available) {
-      setState(() => isListening = true);
-      speech.listen(
+      setState(() => _isListening = true);
+      _speech.listen(
         onResult: (result) {
           setState(() {
-            searchQuery = result.recognizedWords;
-            _searchItems(searchQuery);
+            _searchController.text = result.recognizedWords;
+            _searchItems(_searchController.text);
           });
         },
       );
     }
   }
-
 @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text(
-        "Actualités Politiques",
-        style: TextStyle(color: Colors.white, fontSize: 18),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ), elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+               _searchItems = filteredItems;
+                _searchController.clear();
+              });
+            },
+            icon: Icon(_isSearching ? Icons.cancel : Icons.search),
+          ),
+        ],
       ),
-      backgroundColor: Colors.blue,
-      elevation: 0,
-      actions: [
-        IconButton(
-          onPressed: () {
-            setState(() {
-              _isSearching = !_isSearching;
-              filteredItems = items; // Garde la liste filtrée
-              _searchController.clear();
-            });
-          },
-          icon: Icon(_isSearching ? Icons.cancel : Icons.search),
-        ),
-      ],
-    ),
-    body: Column(
-      children: [
-        if (_isSearching)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _searchItems,
-              decoration: InputDecoration(
-                labelText: "Rechercher...",
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: Icon(isListening ? Icons.mic : Icons.mic_none),
-                  onPressed: _startListening,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
+      body: Column(
+        children: [
+           if (_isSearching)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _searchItems,
+                decoration: InputDecoration(
+                  labelText: 'Rechercher',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                    onPressed: _isListening ? _stopListening : _startListening,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
                 ),
               ),
             ),
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredItems.isEmpty
+                    ? const Center(child: Text("Aucun contenu trouvé"))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(10.0),
+                        itemCount: filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          return ImageItem(
+                            imagePath: item["image"]!,
+                            pdfPath: item["pdf"]!,
+                            videoPath: item["video"]!,
+                            type: item["type"]!,
+                          );
+                        },
+                      ),
           ),
-        Expanded(
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : filteredItems.isEmpty
-                  ? const Center(child: Text("Aucun contenu trouvé"))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(10.0),
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredItems[index];
-                        return ImageItem(
-                          imagePath: item["image"]!,
-                          pdfPath: item["pdf"]!,
-                          videoPath: item["video"]!,
-                          type: item["type"]!,
-                        );
-                      },
-                    ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),        
 
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchFeedItems,
