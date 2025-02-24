@@ -15,7 +15,9 @@ class _VideoListPageState extends State<VideoListPage> {
   bool _isListening = false;
   final TextEditingController _searchController = TextEditingController();
   final stt.SpeechToText _speech = stt.SpeechToText();
-
+  late stt.SpeechToText _speech;
+  String searchQuery = "";
+  
   @override
   void initState() {
     super.initState();
@@ -73,100 +75,79 @@ class _VideoListPageState extends State<VideoListPage> {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    backgroundColor: Colors.white,
     appBar: AppBar(
-      title: const Text("Décryptages",
-          style: TextStyle(color: Colors.white, fontSize: 18)),
-      backgroundColor: Colors.blue,
-      elevation: 0,
-      actions: [
-        IconButton(
-          onPressed: () {
-            setState(() {
-              _isSearching = !_isSearching;
-              _searchController.clear();
-              _filterVideos(""); // Réinitialise la recherche
-            });
-          },
-          icon: Icon(_isSearching ? Icons.cancel : Icons.search),
-        ),
-      ],
-    ),
-    body: Column(
-      children: [
-        if (_isSearching)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _filterVideos,
-              decoration: InputDecoration(
-                labelText: 'Rechercher',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                  onPressed: _isListening ? _stopListening : _startListening,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
+        title: const Text("Décryptages", style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+      ), elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+               _filterVideos = filteredVideos;
+                _searchController.clear();
+              });
+            },
+            icon: Icon(_isSearching ? Icons.cancel : Icons.search),
+          ),
+        ],
+          
+   
+      body: Column(
+        children: [
+          if (_isSearching)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _filterVideos,
+                decoration: InputDecoration(
+                  labelText: 'Rechercher',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                    onPressed: _isListening ? _stopListening : _startListening,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
                 ),
               ),
             ),
-          ),
-        Expanded(
-          child: filteredVideos.isEmpty
-              ? const Center(
-                  child: Text(
-                    "Aucune vidéo trouvée",
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredVideos.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  leading: Image.network(
+                    filteredVideos[index]['thumbnail']!,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.error, color: Colors.red);
+                    },
                   ),
-                )
-              : ListView.builder(
-                  itemCount: filteredVideos.length,
-                  itemBuilder: (context, index) {
-                    return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        leading: Image.network(
-                          filteredVideos[index]['thumbnail']!,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.error, color: Colors.red);
-                          },
+                  title: Text(filteredVideos[index]['title']!),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoPlayerPage(
+                          videoPath: filteredVideos[index]['video_path']!,
                         ),
-                        title: Text(
-                          filteredVideos[index]['title']!,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        trailing: const Icon(Icons.play_arrow, size: 30),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => VideoPlayerPage(
-                                videoPath: filteredVideos[index]['video_path']!,
-                              ),
-                            ),
-                          );
-                        },
                       ),
                     );
                   },
-                ),
-        ),
-      ],
-    ),
-  );
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }                
 }
-
 
 class VideoPlayerPage extends StatefulWidget {
   final String videoPath;
