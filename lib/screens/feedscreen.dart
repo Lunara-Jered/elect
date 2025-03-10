@@ -15,13 +15,10 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   List<Map<String, dynamic>> feedItems = [];
   List<Map<String, dynamic>> filteredItems = [];
-  bool _isSearching = false;
-  bool _isLoading = true;
-  bool _isListening = false;
+  bool isLoading = false;
   String searchQuery = "";
   stt.SpeechToText speech = stt.SpeechToText();
-  late stt.SpeechToText _speech;
-  final TextEditingController _searchController = TextEditingController();
+  bool isListening = false;
 
   @override
   void initState() {
@@ -66,25 +63,32 @@ class _FeedScreenState extends State<FeedScreen> {
     });
   }
 
-  Future<void> _startListening() async {
-    bool available = await _speech.initialize(
-      onStatus: (status) => print("Status: $status"),
-      onError: (error) => print("Error: $error"),
+  void _startListening() async {
+    bool available = await speech.initialize(
+      onStatus: (status) {
+        if (status == "notListening") {
+          setState(() => isListening = false);
+        }
+      },
+      onError: (error) {
+        print("Erreur Speech: $error");
+      },
     );
 
     if (available) {
-      setState(() => _isListening = true);
-      _speech.listen(
+      setState(() => isListening = true);
+      speech.listen(
         onResult: (result) {
           setState(() {
-            _searchController.text = result.recognizedWords;
-            _searchItems(_searchController.text);
+            searchQuery = result.recognizedWords;
+            _searchItems(searchQuery);
           });
         },
       );
     }
   }
-@override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -194,6 +198,7 @@ class ImageItem extends StatelessWidget {
     );
   }
 }
+
 
 
 class PDFViewScreen extends StatefulWidget {
