@@ -73,32 +73,11 @@ class _VideoListPageState extends State<VideoListPage> {
   }
 
 @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-        title: Text("Décryptages", style: TextStyle(color: Colors.white, fontSize: 18)),
-        backgroundColor: Colors.blue,
-      elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-               _filterVideos = filteredVideos;
-                _searchController.clear();
-              });
-            },
-            icon: Icon(_isSearching ? Icons.cancel : Icons.search),
-          ),
-        ],
-        ),
-   
-      body: Column(
-        children: [
-          if (_isSearching)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: _isSearching
+            ? TextField(
                 controller: _searchController,
                 onChanged: _filterVideos,
                 decoration: InputDecoration(
@@ -112,8 +91,25 @@ Widget build(BuildContext context) {
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
-              ),
-            ),
+              )
+            : const Text('Décryptages',
+                style: TextStyle(color: Colors.white, fontSize: 18)),
+        backgroundColor: Colors.blue,
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                _searchController.clear();
+                _filterVideos(""); // Réinitialise la recherche
+              });
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
           Expanded(
             child: ListView.builder(
               itemCount: filteredVideos.length,
@@ -146,7 +142,7 @@ Widget build(BuildContext context) {
         ],
       ),
     );
-  }                
+  }
 }
 
 class VideoPlayerPage extends StatefulWidget {
