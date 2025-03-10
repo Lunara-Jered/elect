@@ -90,41 +90,30 @@ class _FeedScreenState extends State<FeedScreen> {
       appBar: AppBar(
         title: const Text("Actualités Politiques", style: TextStyle(color: Colors.white, fontSize: 18)),
         backgroundColor: Colors.blue,
-       elevation :0,
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-               _searchItems = filteredItems;
-                _searchController.clear();
-              });
-            },
-            icon: Icon(_isSearching ? Icons.cancel : Icons.search),
-          ),
-        ],
       ),
       body: Column(
         children: [
-           if (_isSearching)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _searchItems,
-                decoration: InputDecoration(
-                  labelText: 'Rechercher',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                    onPressed: _isListening ? _stopListening : _startListening,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: _searchItems,
+                    decoration: InputDecoration(
+                      hintText: "Rechercher...",
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
-              ),
+                IconButton(
+                  icon: Icon(isListening ? Icons.mic : Icons.mic_none, color: Colors.blue),
+                  onPressed: _startListening,
+                ),
+              ],
             ),
+          ),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -145,14 +134,12 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
           ),
         ],
-      ),        
-
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchFeedItems,
         backgroundColor: Colors.blue,
         child: const Icon(Icons.refresh, color: Colors.white),
       ),
-   
     );
   }
 }
