@@ -39,7 +39,7 @@ class _FeedScreenState extends State<FeedScreen> {
             "video": item['video_url'] ?? '',
             "type": item['type'] ?? '',
             "title": item['title'] ?? '',
-          }).toList();
+          }).toList().reversed.toList();
           filteredItems = List.from(feedItems);
         });
       }
