@@ -5,7 +5,6 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:path/path.dart' as p;
 
 class PDFViewerSection extends StatefulWidget {
   const PDFViewerSection({super.key});
@@ -52,7 +51,6 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
           _filteredFiles = _pdfFiles;
         });
 
-        // Pré-charge les PDFs en cache
         _preloadPDFs();
       }
     } catch (e) {
@@ -65,7 +63,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
   Future<void> _preloadPDFs() async {
     for (var file in _pdfFiles) {
       try {
-        await _cacheManager.downloadFile(file['url']!);
+        await _cacheManager.getFileFromCache(file['url']!);
       } catch (e) {
         print("Erreur pré-chargement PDF ${file['name']}: $e");
       }
@@ -143,7 +141,6 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
                   ),
                 ),
               ),
-            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -237,20 +234,20 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
   Future<void> _loadPDF() async {
     try {
       // Vérifie d'abord le cache
-      final file = await _cacheManager.getSingleFile(widget.pdfUrl);
+      final fileInfo = await _cacheManager.getFileFromCache(widget.pdfUrl);
       
-      if (await file.exists()) {
+      if (fileInfo != null) {
         setState(() {
-          localPath = file.path;
+          localPath = fileInfo.file.path;
           isLoading = false;
         });
         return;
       }
 
       // Télécharge si pas dans le cache
-      final newFile = await _cacheManager.downloadFile(widget.pdfUrl);
+      final newFileInfo = await _cacheManager.downloadFile(widget.pdfUrl);
       setState(() {
-        localPath = newFile.path;
+        localPath = newFileInfo.file.path;
         isLoading = false;
       });
     } catch (e) {
