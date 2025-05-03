@@ -205,30 +205,7 @@ void _showStoryPopup(String mediaUrl) {
     );
   }
 }
-// Nouvel écran dédié au chargement
-class StoryLoadingScreen extends StatelessWidget {
-  final String mediaUrl;
-  
-  const StoryLoadingScreen({super.key, required this.mediaUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: FutureBuilder(
-        future: _initializeMedia(mediaUrl),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return _ErrorWidget();
-          if (snapshot.connectionState != ConnectionState.done) {
-            return Center(child: CircularProgressIndicator());
-          }
-          return _MediaViewer(mediaUrl: mediaUrl);
-        },
-      ),
-    );
-  }
-}
-// 📌 Popup qui affiche les images et vidéos
+// Complete StoryPopup implementation
 class StoryPopup extends StatefulWidget {
   final String mediaUrl;
 
@@ -239,12 +216,13 @@ class StoryPopup extends StatefulWidget {
 }
 
 class _StoryPopupState extends State<StoryPopup> {
-  late Future<void> _initializeVideoPlayerFuture;
+  late VideoPlayerController _controller;
+  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeVideoPlayerFuture = _initializeVideo();
+    _initializeVideo();
   }
 
   Future<void> _initializeVideo() async {
@@ -254,55 +232,52 @@ class _StoryPopupState extends State<StoryPopup> {
       await _controller.initialize();
       await _controller.play();
     } catch (e) {
-      print("Erreur vidéo: $e");
-      throw e;
+      print("Video error: $e");
+      setState(() {
+        _hasError = true;
+      });
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _initializeVideoPlayerFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          if (snapshot.hasError) {
-            return _buildErrorWidget();
-          }
-          return _buildVideoWidget();
-        } else {
-          return Center(child: CircularProgressIndicator());
-        }
-      },
+  Widget _buildErrorWidget() {
+    return const Padding(
+      padding: EdgeInsets.all(20),
+      child: Text(
+        "Impossible de charger le média.",
+        style: TextStyle(color: Colors.white, fontSize: 16),
+        textAlign: TextAlign.center,
+      ),
     );
   }
-}
+
+  Widget _buildVideoWidget() {
+    return AspectRatio(
+      aspectRatio: _controller.value.aspectRatio,
+      child: VideoPlayer(_controller),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       contentPadding: EdgeInsets.zero,
-      backgroundColor: Colors.black, // Fond noir pour un effet immersif
+      backgroundColor: Colors.black,
       content: Stack(
         alignment: Alignment.center,
         children: [
           if (_hasError)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                "Impossible de charger la vidéo.",
-                style: TextStyle(color: Colors.white, fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            )
+            _buildErrorWidget()
           else if (!_controller.value.isInitialized)
             const Center(child: CircularProgressIndicator())
           else
-            AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
-            ),
+            _buildVideoWidget(),
 
-          // Bouton "Fermer"
           Positioned(
             top: 10,
             right: 10,
@@ -312,7 +287,6 @@ class _StoryPopupState extends State<StoryPopup> {
             ),
           ),
 
-          // Bouton Play/Pause
           Positioned(
             bottom: 10,
             child: FloatingActionButton(
@@ -337,3 +311,70 @@ class _StoryPopupState extends State<StoryPopup> {
   }
 }
 
+// Correct StoryLoadingScreen implementation
+class StoryLoadingScreen extends StatefulWidget {
+  final String mediaUrl;
+  
+  const StoryLoadingScreen({super.key, required this.mediaUrl});
+
+  @override
+  _StoryLoadingScreenState createState() => _StoryLoadingScreenState();
+}
+
+class _StoryLoadingScreenState extends State<StoryLoadingScreen> {
+  late VideoPlayerController _controller;
+  bool _hasError = false;
+
+  Future<void> _initializeMedia() async {
+    try {
+      _controller = VideoPlayerController.network(widget.mediaUrl)
+        ..setLooping(true);
+      await _controller.initialize();
+      await _controller.play();
+    } catch (e) {
+      print("Media error: $e");
+      setState(() {
+        _hasError = true;
+      });
+    }
+  }
+
+  Widget _buildErrorWidget() {
+    return const Center(
+      child: Text(
+        "Failed to load media",
+        style: TextStyle(color: Colors.white, fontSize: 16),
+      ),
+    );
+  }
+
+  Widget _buildMediaViewer() {
+    return AspectRatio(
+      aspectRatio: _controller.value.aspectRatio,
+      child: VideoPlayer(_controller),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: FutureBuilder(
+        future: _initializeMedia(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            if (_hasError) return _buildErrorWidget();
+            return _buildMediaViewer();
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      ),
+    );
+  }
+}
