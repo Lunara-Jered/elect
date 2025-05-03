@@ -26,7 +26,7 @@ class Elect241App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MainScreen(),
+      home: const CountrySelectionPage(),
     );
   }
 }
@@ -374,6 +374,137 @@ class _StoryLoadingScreenState extends State<StoryLoadingScreen> {
           }
           return const Center(child: CircularProgressIndicator());
         },
+      ),
+    );
+  }
+}
+
+class CountrySelectionPage extends StatelessWidget {
+  const CountrySelectionPage({super.key});
+
+  final List<Map<String, String>> africanFrenchCountries = const [
+    {'name': 'Algérie', 'code': 'DZ'},
+    {'name': 'Bénin', 'code': 'BJ'},
+    {'name': 'Burkina Faso', 'code': 'BF'},
+    {'name': 'Burundi', 'code': 'BI'},
+    {'name': 'Cameroun', 'code': 'CM'},
+    {'name': 'Comores', 'code': 'KM'},
+    {'name': 'Congo', 'code': 'CG'},
+    {'name': "Côte d'Ivoire", 'code': 'CI'},
+    {'name': 'Djibouti', 'code': 'DJ'},
+    {'name': 'Gabon', 'code': 'GA'},
+    {'name': 'Guinée', 'code': 'GN'},
+    {'name': 'Guinée équatoriale', 'code': 'GQ'},
+    {'name': 'Madagascar', 'code': 'MG'},
+    {'name': 'Mali', 'code': 'ML'},
+    {'name': 'Maroc', 'code': 'MA'},
+    {'name': 'Mauritanie', 'code': 'MR'},
+    {'name': 'Niger', 'code': 'NE'},
+    {'name': 'République centrafricaine', 'code': 'CF'},
+    {'name': 'République démocratique du Congo', 'code': 'CD'},
+    {'name': 'Rwanda', 'code': 'RW'},
+    {'name': 'Sénégal', 'code': 'SN'},
+    {'name': 'Seychelles', 'code': 'SC'},
+    {'name': 'Tchad', 'code': 'TD'},
+    {'name': 'Togo', 'code': 'TG'},
+    {'name': 'Tunisie', 'code': 'TN'},
+  ];
+
+  void _navigateToCountryPage(BuildContext context, String countryName, String countryCode) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CountryDetailPage(
+          countryName: countryName,
+          countryCode: countryCode,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pays Francophones d\'Afrique'),
+        centerTitle: true,
+      ),
+      body: ListView.builder(
+        itemCount: africanFrenchCountries.length,
+        itemBuilder: (context, index) {
+          final country = africanFrenchCountries[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                child: Text(country['code']!),
+              ),
+              title: Text(
+                country['name']!,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              trailing: const Icon(Icons.arrow_forward),
+              onTap: () => _navigateToCountryPage(
+                context,
+                country['name']!,
+                country['code']!,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CountryDetailPage extends StatelessWidget {
+  final String countryName;
+  final String countryCode;
+
+  const CountryDetailPage({
+    super.key,
+    required this.countryName,
+    required this.countryCode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(countryName),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Page dédiée à',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 20),
+            CircleAvatar(
+              radius: 50,
+              child: Text(
+                countryCode,
+                style: const TextStyle(fontSize: 30),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              countryName,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Retour'),
+            ),
+          ],
+        ),
       ),
     );
   }
