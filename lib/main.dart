@@ -120,33 +120,43 @@ class StorySection extends StatefulWidget {
 class _StorySectionState extends State<StorySection> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> stories = [];
-
+  void _preloadVideo(String url) {
+    if (url.endsWith('.mp4')) {
+      final controller = VideoPlayerController.network(url);
+      controller.initialize().then((_) => controller.dispose());
+    }
+  }
   @override
   void initState() {
     super.initState();
     fetchStories();
   }
 
+
+  
   Future<void> fetchStories() async {
     final response = await supabase.from('stories').select();
     setState(() {
       stories = List<Map<String, dynamic>>.from(response);
     });
-  }
-
-  void _showStoryPopup(String mediaUrl) {
-    if (mediaUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aucun média disponible pour cette story.")),
-      );
-      return;
+    
+    // Pré-charger les vidéos
+    for (var story in stories) {
+      _preloadVideo(story['mediaUrl'] ?? '');
     }
-
-    showDialog(
-      context: context,
-      builder: (context) => StoryPopup(mediaUrl: mediaUrl),
-    );
   }
+void _showStoryPopup(String mediaUrl) {
+  if (mediaUrl.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Aucun média disponible")),
+    );
+    return;
+  }
+
+  Navigator.push(context, MaterialPageRoute(
+    builder: (_) => StoryLoadingScreen(mediaUrl: mediaUrl),
+  ));
+}
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +205,29 @@ class _StorySectionState extends State<StorySection> {
     );
   }
 }
+// Nouvel écran dédié au chargement
+class StoryLoadingScreen extends StatelessWidget {
+  final String mediaUrl;
+  
+  const StoryLoadingScreen({super.key, required this.mediaUrl});
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: FutureBuilder(
+        future: _initializeMedia(mediaUrl),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) return _ErrorWidget();
+          if (snapshot.connectionState != ConnectionState.done) {
+            return Center(child: CircularProgressIndicator());
+          }
+          return _MediaViewer(mediaUrl: mediaUrl);
+        },
+      ),
+    );
+  }
+}
 // 📌 Popup qui affiche les images et vidéos
 class StoryPopup extends StatefulWidget {
   final String mediaUrl;
@@ -207,32 +239,43 @@ class StoryPopup extends StatefulWidget {
 }
 
 class _StoryPopupState extends State<StoryPopup> {
-  late VideoPlayerController _controller;
-  bool _hasError = false;
+  late Future<void> _initializeVideoPlayerFuture;
 
   @override
   void initState() {
     super.initState();
-    print("📹 Chargement de la vidéo : ${widget.mediaUrl}");
+    _initializeVideoPlayerFuture = _initializeVideo();
+  }
 
-    _controller = VideoPlayerController.network(widget.mediaUrl)
-      ..initialize().then((_) {
-        print("✅ Vidéo chargée avec succès");
-        setState(() {});
-        _controller.play();
-      }).catchError((error) {
-        print("❌ Erreur de chargement vidéo : $error");
-        setState(() {
-          _hasError = true;
-        });
-      });
+  Future<void> _initializeVideo() async {
+    try {
+      _controller = VideoPlayerController.network(widget.mediaUrl)
+        ..setLooping(true);
+      await _controller.initialize();
+      await _controller.play();
+    } catch (e) {
+      print("Erreur vidéo: $e");
+      throw e;
+    }
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _initializeVideoPlayerFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return _buildErrorWidget();
+          }
+          return _buildVideoWidget();
+        } else {
+          return Center(child: CircularProgressIndicator());
+        }
+      },
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
