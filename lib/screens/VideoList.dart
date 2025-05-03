@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class VideoListPage extends StatefulWidget {
   @override
@@ -12,19 +13,23 @@ class _VideoListPageState extends State<VideoListPage> {
   List<Map<String, String>> videos = [];
   List<Map<String, String>> filteredVideos = [];
   bool _isSearching = false;
-   bool _isLoading = false;
+  bool _isLoading = false;
   bool _isListening = false;
   final TextEditingController _searchController = TextEditingController();
   final stt.SpeechToText _speech = stt.SpeechToText();
   String searchQuery = "";
   
+  // Cache pour les contrôleurs vidéo pré-chargés
+  final Map<String, VideoPlayerController> _preloadedControllers = {};
+
   @override
   void initState() {
     super.initState();
-    fetchVideos(); // Charge les vidéos depuis Supabase
+    fetchVideos();
   }
 
   Future<void> fetchVideos() async {
+    setState(() => _isLoading = true);
     try {
       final List<dynamic> response = await Supabase.instance.client
           .from('videos')
@@ -38,9 +43,40 @@ class _VideoListPageState extends State<VideoListPage> {
             }).toList();
         filteredVideos = videos;
       });
+
+      // Pré-charge les vidéos en arrière-plan
+      _preloadVideos();
     } catch (e) {
       print('Erreur de récupération des vidéos: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
+  }
+
+  // Pré-charge les vidéos sans les afficher
+  void _preloadVideos() {
+    for (var video in videos) {
+      final path = video['video_path']!;
+      if (!_preloadedControllers.containsKey(path)) {
+        final controller = VideoPlayerController.network(path);
+        _preloadedControllers[path] = controller;
+        controller.initialize().then((_) {
+          print('Vidéo pré-chargée: $path');
+        }).catchError((e) {
+          print('Erreur pré-chargement: $e');
+          _preloadedControllers.remove(path);
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Nettoie tous les contrôleurs pré-chargés
+    _preloadedControllers.values.forEach((controller) => controller.dispose());
+    _preloadedControllers.clear();
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _filterVideos(String query) {
@@ -72,7 +108,7 @@ class _VideoListPageState extends State<VideoListPage> {
     _speech.stop();
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -102,52 +138,62 @@ class _VideoListPageState extends State<VideoListPage> {
               setState(() {
                 _isSearching = !_isSearching;
                 _searchController.clear();
-                _filterVideos(""); // Réinitialise la recherche
+                _filterVideos("");
               });
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: filteredVideos.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: Image.network(
-                    filteredVideos[index]['thumbnail']!,
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.error, color: Colors.red);
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredVideos.length,
+                    itemBuilder: (context, index) {
+                      final video = filteredVideos[index];
+                      return ListTile(
+                        leading: CachedNetworkImage(
+                          imageUrl: video['thumbnail']!,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.error, color: Colors.red),
+                        ),
+                        title: Text(video['title']!),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VideoPlayerPage(
+                                videoPath: video['video_path']!,
+                                preloadedController: _preloadedControllers[video['video_path']],
+                              ),
+                            ),
+                          );
+                        },
+                      );
                     },
                   ),
-                  title: Text(filteredVideos[index]['title']!),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => VideoPlayerPage(
-                          videoPath: filteredVideos[index]['video_path']!,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
 
 class VideoPlayerPage extends StatefulWidget {
   final String videoPath;
-  VideoPlayerPage({required this.videoPath});
+  final VideoPlayerController? preloadedController;
+
+  VideoPlayerPage({required this.videoPath, this.preloadedController});
 
   @override
   _VideoPlayerPageState createState() => _VideoPlayerPageState();
@@ -156,22 +202,48 @@ class VideoPlayerPage extends StatefulWidget {
 class _VideoPlayerPageState extends State<VideoPlayerPage> {
   late VideoPlayerController _controller;
   bool _hasError = false;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.videoPath)
-      ..initialize().then((_) => setState(() {})).catchError((error) {
-        setState(() {
-          _hasError = true;
-        });
-        print('Erreur de chargement de la vidéo : $error');
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      // Utilise le contrôleur pré-chargé s'il existe
+      if (widget.preloadedController != null && 
+          widget.preloadedController!.value.isInitialized) {
+        _controller = widget.preloadedController!;
+        setState(() => _isInitializing = false);
+      } else {
+        _controller = VideoPlayerController.network(widget.videoPath)
+          ..setLooping(true);
+        
+        await _controller.initialize();
+      }
+      
+      await _controller.play();
+    } catch (error) {
+      print('Erreur de chargement vidéo: $error');
+      setState(() {
+        _hasError = true;
+        _isInitializing = false;
       });
+    }
+    
+    if (!_hasError) {
+      setState(() => _isInitializing = false);
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    // Ne pas disposer si c'est un contrôleur pré-chargé
+    if (widget.preloadedController == null) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -180,37 +252,50 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Décryptages')),
       body: _hasError
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.error, color: Colors.red, size: 50),
-                  Text('Erreur de chargement de la vidéo',
-                      style: TextStyle(fontSize: 18)),
-                ],
-              ),
-            )
-          : Center(
-              child: _controller.value.isInitialized
-                  ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
-                  : const CircularProgressIndicator(),
-            ),
-      floatingActionButton: _hasError
+          ? _buildErrorWidget()
+          : _isInitializing
+              ? _buildLoadingWidget()
+              : _buildVideoPlayer(),
+      floatingActionButton: _hasError || _isInitializing
           ? null
           : FloatingActionButton(
-              onPressed: () {
-                setState(() {
-                  _controller.value.isPlaying
-                      ? _controller.pause()
-                      : _controller.play();
-                });
-              },
+              onPressed: _togglePlayPause,
               child: Icon(
-                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+                _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+              ),
             ),
     );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.error, color: Colors.red, size: 50),
+          Text('Erreur de chargement de la vidéo',
+              style: TextStyle(fontSize: 18)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildVideoPlayer() {
+    return Center(
+      child: AspectRatio(
+        aspectRatio: _controller.value.aspectRatio,
+        child: VideoPlayer(_controller),
+      ),
+    );
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _controller.value.isPlaying ? _controller.pause() : _controller.play();
+    });
   }
 }
