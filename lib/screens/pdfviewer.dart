@@ -124,7 +124,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
       body: Column(
         children: [
           if (_isSearching)
-            Padding(
+           Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
                 controller: _searchController,
@@ -141,6 +141,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
                   ),
                 ),
               ),
+            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
