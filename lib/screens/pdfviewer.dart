@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class PDFViewerSection extends StatefulWidget {
@@ -14,14 +12,15 @@ class PDFViewerSection extends StatefulWidget {
 }
 
 class _PDFViewerSectionState extends State<PDFViewerSection> {
-  List<Map<String, String>> _pdfFiles = [];
-  List<Map<String, String>> _filteredFiles = [];
+  List<Map<String, dynamic>> _pdfFiles = [];
+  List<Map<String, dynamic>> _filteredFiles = [];
   bool _isSearching = false;
   bool _isLoading = true;
   bool _isListening = false;
   late stt.SpeechToText _speech;
   final TextEditingController _searchController = TextEditingController();
   final _cacheManager = DefaultCacheManager();
+  final _supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -34,48 +33,59 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
     try {
       setState(() => _isLoading = true);
 
-      final response = await Supabase.instance.client
+      final response = await _supabase
           .from('pdf_files')
-          .select('name, file_url, updated_at')
+          .select('id, name, file_url, updated_at')
           .order('updated_at', ascending: false);
 
-      if (response.isNotEmpty) {
+      if (response != null && response.isNotEmpty) {
         final files = response.map((item) => {
-          'name': item['name'] as String,
-          'url': item['file_url'] as String,
-          'updated_at': item['updated_at'] as String,
+          'id': item['id'].toString(),
+          'name': item['name']?.toString() ?? 'Sans nom',
+          'url': item['file_url']?.toString() ?? '',
+          'updated_at': item['updated_at']?.toString() ?? '',
         }).toList();
 
         setState(() {
           _pdfFiles = files;
-          _filteredFiles = _pdfFiles;
+          _filteredFiles = List.from(_pdfFiles);
         });
 
-        _preloadPDFs();
+        await _preloadPDFs();
       }
     } catch (e) {
-      print("Erreur lors de la récupération des PDFs: $e");
+      debugPrint("Erreur lors de la récupération des PDFs: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: ${e.toString()}')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _preloadPDFs() async {
-    for (var file in _pdfFiles) {
-      try {
-        await _cacheManager.getFileFromCache(file['url']!);
-      } catch (e) {
-        print("Erreur pré-chargement PDF ${file['name']}: $e");
-      }
+    try {
+      await Future.wait(_pdfFiles.map((file) async {
+        try {
+          final url = file['url'] as String;
+          if (url.isNotEmpty) {
+            await _cacheManager.getFileFromCache(url);
+          }
+        } catch (e) {
+          debugPrint("Erreur pré-chargement PDF: $e");
+        }
+      }));
+    } catch (e) {
+      debugPrint("Erreur lors du pré-chargement: $e");
     }
   }
 
   void _filterFiles(String query) {
     setState(() {
       _filteredFiles = query.isEmpty
-          ? _pdfFiles
-          : _pdfFiles
-              .where((file) => file['name']!.toLowerCase().contains(query.toLowerCase()))
+          ? List.from(_pdfFiles)
+          : _pdfFiles.where((file) => 
+              file['name'].toString().toLowerCase().contains(query.toLowerCase()))
               .toList();
     });
   }
@@ -103,61 +113,56 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Lois électorales", style: TextStyle(color: Colors.white, fontSize: 18)),
-        backgroundColor: Colors.blue,
-        elevation: 0,
+        title: const Text("Lois électorales"),
         actions: [
           IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
-                _filteredFiles = _pdfFiles;
-                _searchController.clear();
+                if (!_isSearching) {
+                  _searchController.clear();
+                  _filterFiles('');
+                }
               });
             },
-            icon: Icon(_isSearching ? Icons.cancel : Icons.search),
           ),
         ],
       ),
       body: Column(
         children: [
           if (_isSearching)
-           Padding(
+            Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
                 controller: _searchController,
-                onChanged: _filterFiles,
                 decoration: InputDecoration(
                   labelText: 'Rechercher',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: IconButton(
-                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                    icon: Icon(_isListening ? Icons.mic_off : Icons.mic),
                     onPressed: _isListening ? _stopListening : _startListening,
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
+                  border: const OutlineInputBorder(),
                 ),
+                onChanged: _filterFiles,
               ),
             ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredFiles.isEmpty
-                    ? const Center(
-                        child: Text("Aucun fichier PDF trouvé", 
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      )
+                    ? const Center(child: Text("Aucun PDF disponible"))
                     : ListView.builder(
                         itemCount: _filteredFiles.length,
                         itemBuilder: (context, index) {
                           final file = _filteredFiles[index];
-                          return _PDFListItem(
-                            fileName: file['name']!,
-                            fileUrl: file['url']!,
-                            onTap: () => _openPDF(context, file['url']!, file['name']!),
+                          return ListTile(
+                            leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                            title: Text(file['name']),
+                            subtitle: Text(file['updated_at']),
+                            onTap: () => _openPDF(context, file['url'], file['name']),
                           );
                         },
                       ),
@@ -165,47 +170,23 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _fetchPDFFilesFromDatabase,
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         child: const Icon(Icons.refresh),
+        onPressed: _fetchPDFFilesFromDatabase,
       ),
     );
   }
 
   void _openPDF(BuildContext context, String url, String name) {
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("URL du PDF invalide")));
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PDFViewScreen(pdfUrl: url, pdfName: name),
-      ),
-    );
-  }
-}
-
-class _PDFListItem extends StatelessWidget {
-  final String fileName;
-  final String fileUrl;
-  final VoidCallback onTap;
-
-  const _PDFListItem({
-    required this.fileName,
-    required this.fileUrl,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        title: Text(fileName, style: const TextStyle(fontWeight: FontWeight.bold)),
-        leading: const Icon(Icons.picture_as_pdf, color: Colors.red, size: 30),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-        onTap: onTap,
       ),
     );
   }
@@ -218,12 +199,13 @@ class PDFViewScreen extends StatefulWidget {
   const PDFViewScreen({super.key, required this.pdfUrl, required this.pdfName});
 
   @override
-  _PDFViewScreenState createState() => _PDFViewScreenState();
+  State<PDFViewScreen> createState() => _PDFViewScreenState();
 }
 
 class _PDFViewScreenState extends State<PDFViewScreen> {
-  String? localPath;
-  bool isLoading = true;
+  String? _localPath;
+  bool _isLoading = true;
+  String? _error;
   final _cacheManager = DefaultCacheManager();
 
   @override
@@ -234,26 +216,33 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
 
   Future<void> _loadPDF() async {
     try {
-      // Vérifie d'abord le cache
-      final fileInfo = await _cacheManager.getFileFromCache(widget.pdfUrl);
+      debugPrint("Début du chargement du PDF: ${widget.pdfUrl}");
       
-      if (fileInfo != null) {
+      // Vérifie d'abord le cache
+      final cachedFile = await _cacheManager.getFileFromCache(widget.pdfUrl);
+      if (cachedFile != null) {
+        debugPrint("PDF trouvé dans le cache");
         setState(() {
-          localPath = fileInfo.file.path;
-          isLoading = false;
+          _localPath = cachedFile.file.path;
+          _isLoading = false;
         });
         return;
       }
 
-      // Télécharge si pas dans le cache
-      final newFileInfo = await _cacheManager.downloadFile(widget.pdfUrl);
+      debugPrint("Téléchargement du PDF...");
+      final newFile = await _cacheManager.downloadFile(widget.pdfUrl);
       setState(() {
-        localPath = newFileInfo.file.path;
-        isLoading = false;
+        _localPath = newFile.file.path;
+        _isLoading = false;
       });
+      debugPrint("PDF téléchargé avec succès");
+      
     } catch (e) {
-      print("Erreur chargement PDF: $e");
-      setState(() => isLoading = false);
+      debugPrint("Erreur de chargement du PDF: $e");
+      setState(() {
+        _error = "Impossible de charger le PDF";
+        _isLoading = false;
+      });
     }
   }
 
@@ -261,22 +250,38 @@ class _PDFViewScreenState extends State<PDFViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.pdfName, style: const TextStyle(fontSize: 18)),
-        backgroundColor: Colors.blue,
+        title: Text(widget.pdfName),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : localPath == null
-              ? const Center(child: Text("Impossible de charger le PDF"))
-              : PDFView(
-                  filePath: localPath,
-                  enableSwipe: true,
-                  swipeHorizontal: false,
-                  pageSnap: true,
-                  onRender: (_) => setState(() => isLoading = false),
-                  onError: (error) => print("Erreur PDF: $error"),
-                  onPageError: (page, error) => print('Erreur page $page: $error'),
-                ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_error != null) {
+      return Center(child: Text(_error!));
+    }
+    
+    if (_localPath == null) {
+      return const Center(child: Text("Fichier PDF introuvable"));
+    }
+
+    return PDFView(
+      filePath: _localPath!,
+      enableSwipe: true,
+      swipeHorizontal: false,
+      pageSnap: true,
+      onError: (error) {
+        debugPrint("Erreur PDF: $error");
+        setState(() => _error = "Erreur d'affichage du PDF");
+      },
+      onPageError: (page, error) {
+        debugPrint("Erreur page $page: $error");
+      },
+      onRender: (_) => setState(() => _isLoading = false),
     );
   }
 }
