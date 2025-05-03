@@ -35,15 +35,14 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
 
       final response = await _supabase
           .from('pdf_files')
-          .select('id, name, file_url') // Retiré updated_at
-          .order('name', ascending: true); // Tri par nom à la place
+          .select('id, name, file_url')
+          .order('name', ascending: true);
 
       if (response != null && response.isNotEmpty) {
         final files = response.map((item) => {
           'id': item['id'].toString(),
           'name': item['name']?.toString() ?? 'Sans nom',
           'url': item['file_url']?.toString() ?? '',
-          // Retiré updated_at
         }).toList();
 
         setState(() {
@@ -90,7 +89,40 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
     });
   }
 
-  // ... (le reste du code reste inchangé jusqu'à la méthode build)
+  Future<void> _startListening() async {
+    bool available = await _speech.initialize();
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _searchController.text = result.recognizedWords;
+            _filterFiles(_searchController.text);
+          });
+        },
+      );
+    }
+  }
+
+  void _stopListening() {
+    setState(() => _isListening = false);
+    _speech.stop();
+  }
+
+  void _openPDF(BuildContext context, String url, String name) {
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("URL du PDF invalide")));
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PDFViewScreen(pdfUrl: url, pdfName: name),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,8 +188,6 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
       ),
     );
   }
-
-  // ... (le reste du code reste inchangé)
 }
 
 class PDFViewScreen extends StatefulWidget {
