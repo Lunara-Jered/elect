@@ -9,7 +9,7 @@ import 'package:video_player/video_player.dart';
 import 'package:country_flags/country_flags.dart';
 import 'package:elect/country/cameroun/camer.dart';
 import 'package:elect/country/civ/main.dart';
-import 'package:elect/country/congobrazza/main.dart'
+import 'package:elect/country/congobrazza/main.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
