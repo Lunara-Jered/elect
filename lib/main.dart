@@ -404,7 +404,7 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
     },
      {
       'name': 'Cameroun', 
-      'code': 'CA', 
+      'code': 'CM', 
       'dialCode': '+237',
       'route': '/cameroun', 
     },
