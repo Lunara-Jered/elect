@@ -6,7 +6,7 @@
 
     <application
         android:networkSecurityConfig="@xml/network_security_config"
-        android:label="elect241"
+        android:label="elect"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
