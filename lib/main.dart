@@ -379,36 +379,89 @@ class _StoryLoadingScreenState extends State<StoryLoadingScreen> {
   }
 }
 
-class CountrySelectionPage extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:country_flags/country_flags.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Pays Francophones',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const CountrySelectionPage(),
+    );
+  }
+}
+
+class CountrySelectionPage extends StatefulWidget {
   const CountrySelectionPage({super.key});
 
+  @override
+  State<CountrySelectionPage> createState() => _CountrySelectionPageState();
+}
+
+class _CountrySelectionPageState extends State<CountrySelectionPage> {
   final List<Map<String, String>> africanFrenchCountries = const [
-    {'name': 'Algérie', 'code': 'DZ'},
-    {'name': 'Bénin', 'code': 'BJ'},
-    {'name': 'Burkina Faso', 'code': 'BF'},
-    {'name': 'Burundi', 'code': 'BI'},
-    {'name': 'Cameroun', 'code': 'CM'},
-    {'name': 'Comores', 'code': 'KM'},
-    {'name': 'Congo', 'code': 'CG'},
-    {'name': "Côte d'Ivoire", 'code': 'CI'},
-    {'name': 'Djibouti', 'code': 'DJ'},
-    {'name': 'Gabon', 'code': 'GA'},
-    {'name': 'Guinée', 'code': 'GN'},
-    {'name': 'Guinée équatoriale', 'code': 'GQ'},
-    {'name': 'Madagascar', 'code': 'MG'},
-    {'name': 'Mali', 'code': 'ML'},
-    {'name': 'Maroc', 'code': 'MA'},
-    {'name': 'Mauritanie', 'code': 'MR'},
-    {'name': 'Niger', 'code': 'NE'},
-    {'name': 'République centrafricaine', 'code': 'CF'},
-    {'name': 'République démocratique du Congo', 'code': 'CD'},
-    {'name': 'Rwanda', 'code': 'RW'},
-    {'name': 'Sénégal', 'code': 'SN'},
-    {'name': 'Seychelles', 'code': 'SC'},
-    {'name': 'Tchad', 'code': 'TD'},
-    {'name': 'Togo', 'code': 'TG'},
-    {'name': 'Tunisie', 'code': 'TN'},
+    {'name': 'Algérie', 'code': 'DZ', 'dialCode': '+213'},
+    {'name': 'Bénin', 'code': 'BJ', 'dialCode': '+229'},
+    {'name': 'Burkina Faso', 'code': 'BF', 'dialCode': '+226'},
+    {'name': 'Burundi', 'code': 'BI', 'dialCode': '+257'},
+    {'name': 'Cameroun', 'code': 'CM', 'dialCode': '+237'},
+    {'name': 'Comores', 'code': 'KM', 'dialCode': '+269'},
+    {'name': 'Congo', 'code': 'CG', 'dialCode': '+242'},
+    {'name': "Côte d'Ivoire", 'code': 'CI', 'dialCode': '+225'},
+    {'name': 'Djibouti', 'code': 'DJ', 'dialCode': '+253'},
+    {'name': 'Gabon', 'code': 'GA', 'dialCode': '+241'},
+    {'name': 'Guinée', 'code': 'GN', 'dialCode': '+224'},
+    {'name': 'Guinée équatoriale', 'code': 'GQ', 'dialCode': '+240'},
+    {'name': 'Madagascar', 'code': 'MG', 'dialCode': '+261'},
+    {'name': 'Mali', 'code': 'ML', 'dialCode': '+223'},
+    {'name': 'Maroc', 'code': 'MA', 'dialCode': '+212'},
+    {'name': 'Mauritanie', 'code': 'MR', 'dialCode': '+222'},
+    {'name': 'Niger', 'code': 'NE', 'dialCode': '+227'},
+    {'name': 'République centrafricaine', 'code': 'CF', 'dialCode': '+236'},
+    {'name': 'République démocratique du Congo', 'code': 'CD', 'dialCode': '+243'},
+    {'name': 'Rwanda', 'code': 'RW', 'dialCode': '+250'},
+    {'name': 'Sénégal', 'code': 'SN', 'dialCode': '+221'},
+    {'name': 'Seychelles', 'code': 'SC', 'dialCode': '+248'},
+    {'name': 'Tchad', 'code': 'TD', 'dialCode': '+235'},
+    {'name': 'Togo', 'code': 'TG', 'dialCode': '+228'},
+    {'name': 'Tunisie', 'code': 'TN', 'dialCode': '+216'},
   ];
+
+  List<Map<String, String>> filteredCountries = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    filteredCountries = List.from(africanFrenchCountries);
+    _searchController.addListener(_filterCountries);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterCountries() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredCountries = africanFrenchCountries.where((country) {
+        return country['name']!.toLowerCase().contains(query) ||
+               country['dialCode']!.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
 
   void _navigateToCountryPage(BuildContext context, String countryName, String countryCode) {
     Navigator.push(
@@ -425,33 +478,66 @@ class CountrySelectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pays Francophones d\'Afrique'),
-        centerTitle: true,
-      ),
-      body: ListView.builder(
-        itemCount: africanFrenchCountries.length,
-        itemBuilder: (context, index) {
-          final country = africanFrenchCountries[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                child: Text(country['code']!),
-              ),
-              title: Text(
-                country['name']!,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              trailing: const Icon(Icons.arrow_forward),
-              onTap: () => _navigateToCountryPage(
-                context,
-                country['name']!,
-                country['code']!,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 150.0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Image.asset(
+                'assets/banner.png', // Remplacez par votre image
+                fit: BoxFit.cover,
               ),
             ),
-          );
-        },
+            pinned: true,
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Rechercher un pays...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final country = filteredCountries[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    leading: CountryFlag.fromCountryCode(
+                      country['code']!,
+                      height: 30,
+                      width: 40,
+                    ),
+                    title: Text(
+                      country['name']!,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Code: ${country['dialCode']}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                    onTap: () => _navigateToCountryPage(
+                      context,
+                      country['name']!,
+                      country['code']!,
+                    ),
+                  ),
+                );
+              },
+              childCount: filteredCountries.length,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -478,17 +564,10 @@ class CountryDetailPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Page dédiée à',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 20),
-            CircleAvatar(
-              radius: 50,
-              child: Text(
-                countryCode,
-                style: const TextStyle(fontSize: 30),
-              ),
+            CountryFlag.fromCountryCode(
+              countryCode,
+              height: 100,
+              width: 150,
             ),
             const SizedBox(height: 20),
             Text(
