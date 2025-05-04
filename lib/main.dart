@@ -7,6 +7,7 @@ import 'package:elect/screens/VideoList.dart';
 import 'package:elect/screens/feedscreen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:country_flags/country_flags.dart';
+import 'package:country/cameroun/camer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,7 @@ class Elect241App extends StatelessWidget {
       home: const CountrySelectionPage(),
        routes: {
         '/gabon': (context) => const MainScreen(),
+        '/cameroun': (context) => const CamerScreen(),
         // ... ajoutez toutes vos routes
       },
     );
@@ -399,6 +401,12 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
       'code': 'GA', 
       'dialCode': '+241',
       'route': '/gabon', 
+    },
+     {
+      'name': 'Cameroun', 
+      'code': 'CA', 
+      'dialCode': '+237',
+      'route': '/cameroun', 
     },
   ];
 
