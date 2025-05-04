@@ -396,17 +396,18 @@ class CountrySelectionPage extends StatefulWidget {
 
 class _CountrySelectionPageState extends State<CountrySelectionPage> {
   final List<Map<String, dynamic>> africanFrenchCountries = const [
-    {
-      'name': 'Gabon', 
-      'code': 'GA', 
-      'dialCode': '+241',
-      'route': '/gabon', 
-    },
+
      {
       'name': 'Cameroun', 
       'code': 'CM', 
       'dialCode': '+237',
       'route': '/cameroun', 
+    },
+    {
+     'name': 'Gabon', 
+     'code': 'GA', 
+     'dialCode': '+241',
+     'route': '/gabon', 
     },
   ];
 
@@ -447,7 +448,7 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 150.0,
+            expandedHeight: 75.0,
             flexibleSpace: FlexibleSpaceBar(
               background: Image.asset(
                 'assets/banner.png',
