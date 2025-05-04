@@ -464,16 +464,16 @@ Widget build(BuildContext context) {
     body: CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 100.0, // Réduit la hauteur pour un logo
+          expandedHeight: 50.0, // Réduit la hauteur pour un logo
           pinned: true,
           flexibleSpace: FlexibleSpaceBar(
             centerTitle: true,
             title: Image.asset(
               'assets/banner.png', // Utilisez votre logo ici
-              height: 50, // Taille du logo
+              height: 40, // Taille du logo
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => 
-                const Text('Mon App'), // Fallback textuel
+                const Text('Elect'), // Fallback textuel
             ),
             background: Container(color: Colors.white), // Fond uni
             collapseMode: CollapseMode.parallax,
