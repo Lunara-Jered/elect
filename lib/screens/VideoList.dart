@@ -19,7 +19,6 @@ class _VideoListPageState extends State<VideoListPage> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   String searchQuery = "";
   
-  // Cache pour les contrôleurs vidéo pré-chargés
   final Map<String, VideoPlayerController> _preloadedControllers = {};
 
   @override
@@ -44,7 +43,6 @@ class _VideoListPageState extends State<VideoListPage> {
         filteredVideos = videos;
       });
 
-      // Pré-charge les vidéos en arrière-plan
       _preloadVideos();
     } catch (e) {
       print('Erreur de récupération des vidéos: $e');
@@ -53,7 +51,6 @@ class _VideoListPageState extends State<VideoListPage> {
     }
   }
 
-  // Pré-charge les vidéos sans les afficher
   void _preloadVideos() {
     for (var video in videos) {
       final path = video['video_path']!;
@@ -72,12 +69,15 @@ class _VideoListPageState extends State<VideoListPage> {
 
   @override
   void dispose() {
-    // Nettoie tous les contrôleurs pré-chargés
-    _preloadedControllers.values.forEach((controller) => controller.dispose());
+    _preloadedControllers.values.forEach((controller) {
+      controller.pause();
+      controller.dispose();
+    });
     _preloadedControllers.clear();
     _searchController.dispose();
     super.dispose();
   }
+
 
   void _filterVideos(String query) {
     setState(() {
@@ -107,6 +107,7 @@ class _VideoListPageState extends State<VideoListPage> {
     setState(() => _isListening = false);
     _speech.stop();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +178,12 @@ class _VideoListPageState extends State<VideoListPage> {
                                 preloadedController: _preloadedControllers[video['video_path']],
                               ),
                             ),
-                          );
+                          ).then((_) {
+                            // Cette callback est exécutée quand on revient de la page
+                            if (_preloadedControllers.containsKey(video['video_path'])) {
+                              _preloadedControllers[video['video_path']]?.pause();
+                            }
+                          });
                         },
                       );
                     },
@@ -212,7 +218,6 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   Future<void> _initializeVideo() async {
     try {
-      // Utilise le contrôleur pré-chargé s'il existe
       if (widget.preloadedController != null && 
           widget.preloadedController!.value.isInitialized) {
         _controller = widget.preloadedController!;
@@ -240,12 +245,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   @override
   void dispose() {
-    // Ne pas disposer si c'est un contrôleur pré-chargé
+    // Toujours mettre en pause avant de disposer
+    _controller.pause();
+    
+    // Ne disposer que si ce n'est pas un contrôleur pré-chargé
     if (widget.preloadedController == null) {
       _controller.dispose();
     }
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {
