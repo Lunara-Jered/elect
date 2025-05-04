@@ -128,6 +128,7 @@ class _PDFViewerSectionState extends State<PDFViewerSection> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
         title: const Text("Lois électorales"),
         actions: [
           IconButton(
