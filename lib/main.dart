@@ -8,6 +8,8 @@ import 'package:elect/screens/feedscreen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:country_flags/country_flags.dart';
 import 'package:elect/country/cameroun/camer.dart';
+import 'package:elect/country/civ/main.dart';
+import 'package:elect/country/congobrazza/main.dart'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,8 @@ class Elect241App extends StatelessWidget {
        routes: {
         '/gabon': (context) => const MainScreen(),
         '/cameroun': (context) => const CamerScreen(),
+         '/congo': (context) => const BrazzaScreen(),
+         '/civ': (context) => const CivScreen(),
         // ... ajoutez toutes vos routes
       },
     );
@@ -404,6 +408,18 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
       'route': '/cameroun', 
     },
     {
+      'name': 'Congo', 
+      'code': 'CG', 
+      'dialCode': '+242',
+      'route': '/congo', 
+    },
+    {
+      'name': "Côte d'Ivoire", 
+      'code': 'CI', 
+      'dialCode': '+225',
+      'route': '/civ', 
+    },
+    {
      'name': 'Gabon', 
      'code': 'GA', 
      'dialCode': '+241',
@@ -441,46 +457,75 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
     Navigator.pushNamed(context, routeName);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 75.0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Image.asset(
-                'assets/banner.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => 
-                  const Placeholder(), // Fallback si l'image n'existe pas
-              ),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.white,
+    body: CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          expandedHeight: 100.0, // Réduit la hauteur pour un logo
+          pinned: true,
+          flexibleSpace: FlexibleSpaceBar(
+            centerTitle: true,
+            title: Image.asset(
+              'assets/banner.png', // Utilisez votre logo ici
+              height: 50, // Taille du logo
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => 
+                const Text('Mon App'), // Fallback textuel
             ),
-            pinned: true,
+            background: Container(color: Colors.white), // Fond uni
+            collapseMode: CollapseMode.parallax,
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un pays...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
+          backgroundColor: Colors.white,
+          elevation: 0, // Supprime l'ombre
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[100], // Fond légèrement gris
+                hintText: 'Rechercher un pays...',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none, // Pas de bordure
                 ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 15),
               ),
             ),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final country = filteredCountries[index];
-                return Card(
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final country = filteredCountries[index];
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Card(
                   color: Colors.white,
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
                   child: ListTile(
                     leading: CountryFlag.fromCountryCode(
                       country['code'],
@@ -489,22 +534,28 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
                     ),
                     title: Text(
                       country['name'],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                     subtitle: Text(
                       'Code: ${country['dialCode']}',
-                      style: const TextStyle(color: Colors.grey),
+                      style: TextStyle(color: Colors.grey[600]),
                     ),
-                    trailing: const Icon(Icons.arrow_forward),
+                    trailing: Icon(
+                      Icons.arrow_forward,
+                      color: Colors.blue[700],
+                    ),
                     onTap: () => _navigateToCountryPage(context, country['route']),
                   ),
-                );
-              },
-              childCount: filteredCountries.length,
-            ),
+                ),
+              );
+            },
+            childCount: filteredCountries.length,
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
