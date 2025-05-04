@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:elect241/screens/pdfviewer.dart';
-import 'package:elect241/screens/faqcreen.dart';
-import 'package:elect241/screens/VideoList.dart';
-import 'package:elect241/screens/feedscreen.dart';
+import 'package:elect/screens/pdfviewer.dart';
+import 'package:elect/screens/faqcreen.dart';
+import 'package:elect/screens/VideoList.dart';
+import 'package:elect/screens/feedscreen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:country_flags/country_flags.dart';
 
