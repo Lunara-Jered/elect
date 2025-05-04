@@ -27,7 +27,7 @@ class Elect241App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const CountrySelectionPage(),
+      home: const BrazzaScreen(),
  
     );
   }
