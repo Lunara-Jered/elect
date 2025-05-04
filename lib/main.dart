@@ -28,6 +28,10 @@ class Elect241App extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const CountrySelectionPage(),
+       routes: {
+        '/gabon': (context) => const MainScreen(),
+        // ... ajoutez toutes vos routes
+      },
     );
   }
 }
@@ -389,35 +393,16 @@ class CountrySelectionPage extends StatefulWidget {
 }
 
 class _CountrySelectionPageState extends State<CountrySelectionPage> {
-  final List<Map<String, String>> africanFrenchCountries = const [
-    {'name': 'Algérie', 'code': 'DZ', 'dialCode': '+213'},
-    {'name': 'Bénin', 'code': 'BJ', 'dialCode': '+229'},
-    {'name': 'Burkina Faso', 'code': 'BF', 'dialCode': '+226'},
-    {'name': 'Burundi', 'code': 'BI', 'dialCode': '+257'},
-    {'name': 'Cameroun', 'code': 'CM', 'dialCode': '+237'},
-    {'name': 'Comores', 'code': 'KM', 'dialCode': '+269'},
-    {'name': 'Congo', 'code': 'CG', 'dialCode': '+242'},
-    {'name': "Côte d'Ivoire", 'code': 'CI', 'dialCode': '+225'},
-    {'name': 'Djibouti', 'code': 'DJ', 'dialCode': '+253'},
-    {'name': 'Gabon', 'code': 'GA', 'dialCode': '+241'},
-    {'name': 'Guinée', 'code': 'GN', 'dialCode': '+224'},
-    {'name': 'Guinée équatoriale', 'code': 'GQ', 'dialCode': '+240'},
-    {'name': 'Madagascar', 'code': 'MG', 'dialCode': '+261'},
-    {'name': 'Mali', 'code': 'ML', 'dialCode': '+223'},
-    {'name': 'Maroc', 'code': 'MA', 'dialCode': '+212'},
-    {'name': 'Mauritanie', 'code': 'MR', 'dialCode': '+222'},
-    {'name': 'Niger', 'code': 'NE', 'dialCode': '+227'},
-    {'name': 'République centrafricaine', 'code': 'CF', 'dialCode': '+236'},
-    {'name': 'République démocratique du Congo', 'code': 'CD', 'dialCode': '+243'},
-    {'name': 'Rwanda', 'code': 'RW', 'dialCode': '+250'},
-    {'name': 'Sénégal', 'code': 'SN', 'dialCode': '+221'},
-    {'name': 'Seychelles', 'code': 'SC', 'dialCode': '+248'},
-    {'name': 'Tchad', 'code': 'TD', 'dialCode': '+235'},
-    {'name': 'Togo', 'code': 'TG', 'dialCode': '+228'},
-    {'name': 'Tunisie', 'code': 'TN', 'dialCode': '+216'},
+  final List<Map<String, dynamic>> africanFrenchCountries = const [
+    {
+      'name': 'Gabon', 
+      'code': 'GA', 
+      'dialCode': '+241',
+      'route': '/gabon', 
+    },
   ];
 
-  List<Map<String, String>> filteredCountries = [];
+  List<Map<String, dynamic>> filteredCountries = [];
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -437,35 +422,30 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       filteredCountries = africanFrenchCountries.where((country) {
-        return country['name']!.toLowerCase().contains(query) ||
-               country['dialCode']!.toLowerCase().contains(query);
+        return country['name'].toString().toLowerCase().contains(query) ||
+               country['dialCode'].toString().toLowerCase().contains(query);
       }).toList();
     });
   }
 
-  void _navigateToCountryPage(BuildContext context, String countryName, String countryCode) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CountryDetailPage(
-          countryName: countryName,
-          countryCode: countryCode,
-        ),
-      ),
-    );
+  void _navigateToCountryPage(BuildContext context, String routeName) {
+    Navigator.pushNamed(context, routeName);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 150.0,
             flexibleSpace: FlexibleSpaceBar(
               background: Image.asset(
-                'assets/banner.png', // Remplacez par votre image
+                'assets/banner.png',
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => 
+                  const Placeholder(), // Fallback si l'image n'existe pas
               ),
             ),
             pinned: true,
@@ -490,15 +470,16 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
               (context, index) {
                 final country = filteredCountries[index];
                 return Card(
+                  color: Colors.white,
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: ListTile(
                     leading: CountryFlag.fromCountryCode(
-                      country['code']!,
+                      country['code'],
                       height: 30,
                       width: 40,
                     ),
                     title: Text(
-                      country['name']!,
+                      country['name'],
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
@@ -506,11 +487,7 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
                       style: const TextStyle(color: Colors.grey),
                     ),
                     trailing: const Icon(Icons.arrow_forward),
-                    onTap: () => _navigateToCountryPage(
-                      context,
-                      country['name']!,
-                      country['code']!,
-                    ),
+                    onTap: () => _navigateToCountryPage(context, country['route']),
                   ),
                 );
               },
@@ -518,52 +495,6 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class CountryDetailPage extends StatelessWidget {
-  final String countryName;
-  final String countryCode;
-
-  const CountryDetailPage({
-    super.key,
-    required this.countryName,
-    required this.countryCode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(countryName),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CountryFlag.fromCountryCode(
-              countryCode,
-              height: 100,
-              width: 150,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              countryName,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Retour'),
-            ),
-          ],
-        ),
       ),
     );
   }
