@@ -6,6 +6,7 @@ import 'package:elect241/screens/faqcreen.dart';
 import 'package:elect241/screens/VideoList.dart';
 import 'package:elect241/screens/feedscreen.dart';
 import 'package:video_player/video_player.dart';
+import 'package:country_flags/country_flags.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -379,27 +380,6 @@ class _StoryLoadingScreenState extends State<StoryLoadingScreen> {
   }
 }
 
-import 'package:flutter/material.dart';
-import 'package:country_flags/country_flags.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pays Francophones',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const CountrySelectionPage(),
-    );
-  }
-}
 
 class CountrySelectionPage extends StatefulWidget {
   const CountrySelectionPage({super.key});
