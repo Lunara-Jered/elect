@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:elect241/screens/pdfviewer.dart';
-import 'package:elect241/screens/faqcreen.dart';
-import 'package:elect241/screens/VideoList.dart';
-import 'package:elect241/screens/feedscreen.dart';
+import 'package:elect/screens/pdfviewer.dart';
+import 'package:elect/screens/faqcreen.dart';
+import 'package:elect/screens/VideoList.dart';
+import 'package:elect/screens/feedscreen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:country_flags/country_flags.dart';
 
@@ -28,23 +28,20 @@ class Elect241App extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const CountrySelectionPage(),
-       routes: {
-        '/gabon': (context) => const MainScreen(),
-        // ... ajoutez toutes vos routes
-      },
+       
     );
   }
 }
 
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class CivScreen extends StatefulWidget {
+  const CivScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<CivScreen> createState() => _CivScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _CivScreenState extends State<CivScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
@@ -385,117 +382,3 @@ class _StoryLoadingScreenState extends State<StoryLoadingScreen> {
 }
 
 
-class CountrySelectionPage extends StatefulWidget {
-  const CountrySelectionPage({super.key});
-
-  @override
-  State<CountrySelectionPage> createState() => _CountrySelectionPageState();
-}
-
-class _CountrySelectionPageState extends State<CountrySelectionPage> {
-  final List<Map<String, dynamic>> africanFrenchCountries = const [
-    {
-      'name': 'Gabon', 
-      'code': 'GA', 
-      'dialCode': '+241',
-      'route': '/gabon', 
-    },
-  ];
-
-  List<Map<String, dynamic>> filteredCountries = [];
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    filteredCountries = List.from(africanFrenchCountries);
-    _searchController.addListener(_filterCountries);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _filterCountries() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      filteredCountries = africanFrenchCountries.where((country) {
-        return country['name'].toString().toLowerCase().contains(query) ||
-               country['dialCode'].toString().toLowerCase().contains(query);
-      }).toList();
-    });
-  }
-
-  void _navigateToCountryPage(BuildContext context, String routeName) {
-    Navigator.pushNamed(context, routeName);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 150.0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Image.asset(
-                'assets/banner.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => 
-                  const Placeholder(), // Fallback si l'image n'existe pas
-              ),
-            ),
-            pinned: true,
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un pays...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final country = filteredCountries[index];
-                return Card(
-                  color: Colors.white,
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    leading: CountryFlag.fromCountryCode(
-                      country['code'],
-                      height: 30,
-                      width: 40,
-                    ),
-                    title: Text(
-                      country['name'],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Code: ${country['dialCode']}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    trailing: const Icon(Icons.arrow_forward),
-                    onTap: () => _navigateToCountryPage(context, country['route']),
-                  ),
-                );
-              },
-              childCount: filteredCountries.length,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
