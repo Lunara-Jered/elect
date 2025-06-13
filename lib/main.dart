@@ -400,7 +400,12 @@ class CountrySelectionPage extends StatefulWidget {
 
 class _CountrySelectionPageState extends State<CountrySelectionPage> {
   final List<Map<String, dynamic>> africanFrenchCountries = const [
-
+      {
+     'name': 'Gabon', 
+     'code': 'GA', 
+     'dialCode': '+241',
+     'route': '/gabon', 
+    },
      {
       'name': 'Cameroun', 
       'code': 'CM', 
@@ -419,12 +424,7 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
       'dialCode': '+225',
       'route': '/civ', 
     },
-    {
-     'name': 'Gabon', 
-     'code': 'GA', 
-     'dialCode': '+241',
-     'route': '/gabon', 
-    },
+    
   ];
 
   List<Map<String, dynamic>> filteredCountries = [];
