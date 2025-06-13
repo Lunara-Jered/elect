@@ -26,12 +26,111 @@ class Elect241App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const CamerScreen(),
+      home: const ComingSoonPage(),
     );
   }
 }
 
+class ComingSoonPage extends StatefulWidget {
+  const ComingSoonPage({Key? key}) : super(key: key);
 
+  @override
+  State<ComingSoonPage> createState() => _ComingSoonPageState();
+}
+
+class _ComingSoonPageState extends State<ComingSoonPage> {
+  String fullText = "Bientôt disponible";
+  String displayedText = "";
+  int currentIndex = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTyping();
+  }
+
+  void _startTyping() {
+    _timer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      if (currentIndex < fullText.length) {
+        setState(() {
+          displayedText += fullText[currentIndex];
+          currentIndex++;
+        });
+      } else {
+        _timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: TypingText(),
+      ),
+    );
+  }
+}
+
+class TypingText extends StatefulWidget {
+  const TypingText({Key? key}) : super(key: key);
+
+  @override
+  State<TypingText> createState() => _TypingTextState();
+}
+
+class _TypingTextState extends State<TypingText> {
+  final String fullText = "Bientôt disponible";
+  String displayedText = "";
+  int currentIndex = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTyping();
+  }
+
+  void _startTyping() {
+    _timer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      if (currentIndex < fullText.length) {
+        setState(() {
+          displayedText += fullText[currentIndex];
+          currentIndex++;
+        });
+      } else {
+        _timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      displayedText,
+      style: const TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: Colors.teal,
+        letterSpacing: 1.5,
+      ),
+    );
+  }
+}
 class CamerScreen extends StatefulWidget {
   const CamerScreen({super.key});
 
