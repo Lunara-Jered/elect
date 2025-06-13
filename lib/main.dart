@@ -33,7 +33,7 @@ class Elect241App extends StatelessWidget {
       home: const CountrySelectionPage(),
        routes: {
         '/gabon': (context) => const MainScreen(),
-        '/cameroun': (context) => const CamerScreen(),
+        '/cameroun': (context) => const ComingSoonPage(),
          '/congo': (context) => const BrazzaScreen(),
          '/civ': (context) => const CivScreen(),
         // ... ajoutez toutes vos routes
