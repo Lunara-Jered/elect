@@ -36,6 +36,7 @@ class Elect241App extends StatelessWidget {
         '/cameroun': (context) => const ComingSoonPage(),
          '/congo': (context) => const ComingSoonPage(),
          '/civ': (context) => const ComingSoonPage(),
+         '/burkina': (context) => const ComingSoonPage(),
         // ... ajoutez toutes vos routes
       },
     );
@@ -121,59 +122,86 @@ class BottomNavBar extends StatelessWidget {
 } 
 
 
-class StorySection extends StatefulWidget {
-  const StorySection({super.key});
-
-  @override
-  _StorySectionState createState() => _StorySectionState();
-}
-
 class _StorySectionState extends State<StorySection> {
   final SupabaseClient supabase = Supabase.instance.client;
+  final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> stories = [];
+  late Timer _autoScrollTimer;
+
   void _preloadVideo(String url) {
     if (url.endsWith('.mp4')) {
       final controller = VideoPlayerController.network(url);
       controller.initialize().then((_) => controller.dispose());
     }
   }
+
   @override
   void initState() {
     super.initState();
     fetchStories();
+    _startAutoScroll();
   }
 
+  @override
+  void dispose() {
+    _autoScrollTimer.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-  
   Future<void> fetchStories() async {
     final response = await supabase.from('stories').select();
     setState(() {
       stories = List<Map<String, dynamic>>.from(response);
     });
-    
-    // Pré-charger les vidéos
+
     for (var story in stories) {
       _preloadVideo(story['mediaUrl'] ?? '');
     }
   }
-void _showStoryPopup(String mediaUrl) {
-  if (mediaUrl.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Aucun média disponible")),
-    );
-    return;
+
+  void _startAutoScroll() {
+    const scrollDuration = Duration(milliseconds: 300);
+    const interval = Duration(seconds: 2);
+
+    _autoScrollTimer = Timer.periodic(interval, (timer) {
+      if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.offset;
+        double nextScroll = currentScroll + 100;
+
+        if (nextScroll >= maxScroll) {
+          nextScroll = 0; // Retour au début
+        }
+
+        _scrollController.animateTo(
+          nextScroll,
+          duration: scrollDuration,
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
-  Navigator.push(context, MaterialPageRoute(
-    builder: (_) => StoryLoadingScreen(mediaUrl: mediaUrl),
-  ));
-}
+  void _showStoryPopup(String mediaUrl) {
+    if (mediaUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Aucun média disponible")),
+      );
+      return;
+    }
+
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => StoryLoadingScreen(mediaUrl: mediaUrl),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 80,
       child: ListView.builder(
+        controller: _scrollController,
         scrollDirection: Axis.horizontal,
         itemCount: stories.length,
         itemBuilder: (context, index) {
@@ -187,6 +215,7 @@ void _showStoryPopup(String mediaUrl) {
             onTap: () => _showStoryPopup(mediaUrl),
             child: Container(
               width: 95,
+              margin: const EdgeInsets.symmetric(horizontal: 5),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -405,6 +434,12 @@ class _CountrySelectionPageState extends State<CountrySelectionPage> {
      'code': 'GA', 
      'dialCode': '+241',
      'route': '/gabon', 
+    },
+    {
+      'name': 'Burkina Faso',
+      'code': 'BF',
+      'dialCode': '+226',
+      'route': '/burkina',
     },
      {
       'name': 'Cameroun', 
